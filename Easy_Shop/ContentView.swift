@@ -2,6 +2,8 @@ import SwiftUI
 import Firebase
 import FirebaseAuth
 
+
+//main entry point
 @main
 struct FirebaseLab3App: App {
     init() {
@@ -11,40 +13,86 @@ struct FirebaseLab3App: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            bablaView()
         }
     }
 }
 
-struct ContentView: View {
+
+
+
+//entry page or view
+struct bablaView: View {
     var body: some View {
         NavigationView {
             VStack {
                 Text("Welcome to FirebaseLab3")
                     .font(.title)
+                    .foregroundColor(.purple)
+                HStack {
+                    NavigationLink(destination: LoginPage()) {
+                        Text("Login")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.leading)
+                            .padding(.vertical, 10.0)
+                            .padding(.horizontal, 20.0)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .padding()
+                    
+                    NavigationLink(destination: SignupPage()) {
+                        Text("Signup")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.leading)
+                            .padding(.vertical, 10.0)
+                            .padding(.horizontal, 20.0)
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .padding()
 
-                NavigationLink(destination: LoginPage()) {
-                    Text("Login")
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-                .padding()
 
-                NavigationLink(destination: SignupPage()) {
-                    Text("Signup")
-                        .padding()
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
                 }
-                .padding()
+
             }
             .padding()
         }
     }
 }
+
+
+
+//welcome page
+struct WelcomePage: View {
+    var userEmail: String // The logged-in user's email
+
+    var body: some View {
+        VStack {
+            Text("Hello, \(userEmail)!")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.green)
+                .padding()
+
+            Text("Welcome to our app!")
+                .font(.title2)
+                .foregroundColor(.secondary)
+                .padding(.top, 10)
+
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+
+
+
 
 struct LoginPage: View {
     @State private var email: String = ""
@@ -53,62 +101,66 @@ struct LoginPage: View {
     @State private var loggedInUserEmail: String? = nil
 
     var body: some View {
-        VStack(spacing: 20) {
-            if let userEmail = loggedInUserEmail {
-                Text("Welcome, \(userEmail)")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.green)
-            } else {
-                Text("Login")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+        NavigationStack {
+            VStack(spacing: 20) {
+                if let userEmail = loggedInUserEmail {
+                    WelcomePage(userEmail: userEmail)
+                } else {
+                    Text("Login to your account")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
 
-                TextField("Email", text: $email)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-
-                SecureField("Password", text: $password)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-
-                Button(action: login) {
-                    Text("Login")
+                    TextField("Email", text: $email)
                         .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
+                        .background(Color(.systemGray6))
                         .cornerRadius(10)
-                }
-                .padding(.top, 20)
 
-                if !errorMessage.isEmpty {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
+                    SecureField("Password", text: $password)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+
+                    Button(action: login) {
+                        Text("Login")
+                            .padding()
+                            .fontWeight(.bold)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .padding(.top, 20)
+
+                    if !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                    }
                 }
+
+                Spacer()
             }
-
-            Spacer()
+            .padding()
         }
-        .padding()
     }
 
     func login() {
         Auth.auth().signIn(withEmail: email, password: password) { result, error in
             if let error = error {
                 errorMessage = error.localizedDescription
-            } else {
+            } else if let user = Auth.auth().currentUser {
+                // Successful login
                 errorMessage = ""
-                if let user = Auth.auth().currentUser {
-                    loggedInUserEmail = user.email
-                    print("User logged in successfully: \(user.email ?? "No Email")")
-                }
+                loggedInUserEmail = user.email
+                print("User logged in successfully: \(user.email ?? "No Email")")
             }
         }
     }
 }
 
+
+
+
+
+//sign up page view
 struct SignupPage: View {
     @State private var email: String = ""
     @State private var password: String = ""
@@ -169,5 +221,12 @@ struct SignupPage: View {
                 print("User signed up successfully")
             }
         }
+    }
+}
+
+//contentview preview
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        LoginPage()
     }
 }
