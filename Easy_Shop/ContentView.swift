@@ -13,6 +13,7 @@ struct FirebaseLab3App: App {
 
     var body: some Scene {
         WindowGroup {
+            //WelcomePage(userEmail: "babla@gmail.com")
             bablaView()
         }
     }
@@ -66,34 +67,7 @@ struct bablaView: View {
 }
 
 
-
-//welcome page
-struct WelcomePage: View {
-    var userEmail: String // The logged-in user's email
-
-    var body: some View {
-        VStack {
-            Text("Hello, \(userEmail)!")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundColor(.green)
-                .padding()
-
-            Text("Welcome to our app!")
-                .font(.title2)
-                .foregroundColor(.secondary)
-                .padding(.top, 10)
-
-            Spacer()
-        }
-        .padding()
-    }
-}
-
-
-
-
-
+//login page view
 struct LoginPage: View {
     @State private var email: String = ""
     @State private var password: String = ""
@@ -104,7 +78,7 @@ struct LoginPage: View {
         NavigationStack {
             VStack(spacing: 20) {
                 if let userEmail = loggedInUserEmail {
-                    WelcomePage(userEmail: userEmail)
+                    ProductListView(userEmail: userEmail)
                 } else {
                     Text("Login to your account")
                         .font(.largeTitle)
