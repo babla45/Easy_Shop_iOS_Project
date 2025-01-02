@@ -22,7 +22,7 @@ struct WelcomePagee: View {
 
     }
 }
-
+/*
 
 
 // Product Model
@@ -152,3 +152,4 @@ struct CartView: View {
     }
 }
 
+*/

@@ -2,8 +2,7 @@ import SwiftUI
 import Firebase
 import FirebaseAuth
 
-
-//main entry point
+// Main entry point
 @main
 struct FirebaseLab3App: App {
     init() {
@@ -13,101 +12,104 @@ struct FirebaseLab3App: App {
 
     var body: some Scene {
         WindowGroup {
-            //WelcomePage(userEmail: "babla@gmail.com")
             bablaView()
         }
     }
 }
 
-
-
-
-//entry page or view
+// Entry page or view
 struct bablaView: View {
+    @State private var loggedInUserEmail: String? = nil
+
     var body: some View {
         NavigationView {
             VStack {
-                Text("Welcome to FirebaseLab3")
-                    .font(.title)
-                    .foregroundColor(.purple)
-                HStack {
-                    NavigationLink(destination: LoginPage()) {
-                        Text("Login")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.leading)
-                            .padding(.vertical, 10.0)
-                            .padding(.horizontal, 20.0)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .padding()
+                if let email = loggedInUserEmail {
+                    // Show Product List View when logged in
+                    ProductListView(userEmail: email, logoutAction: logout)
+                } else {
+                    // Show welcome message and navigation buttons when logged out
+                    Text("Welcome to Easy Shop")
+                        .font(.title)
+                        .foregroundColor(.purple)
                     
-                    NavigationLink(destination: SignupPage()) {
-                        Text("Signup")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.leading)
-                            .padding(.vertical, 10.0)
-                            .padding(.horizontal, 20.0)
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                    HStack {
+                        NavigationLink(destination: LoginPage(loggedInUserEmail: $loggedInUserEmail)) {
+                            Text("Login")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                        }
+                        .padding()
+                        
+                        NavigationLink(destination: SignupPage()) {
+                            Text("Signup")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .padding()
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                        }
+                        .padding()
                     }
-                    .padding()
-
-
                 }
-
             }
             .padding()
+        }
+    }
+
+    func logout() {
+        do {
+            try Auth.auth().signOut()
+            loggedInUserEmail = nil
+        } catch {
+            print("Error logging out: \(error.localizedDescription)")
         }
     }
 }
 
 
-//login page view
+// Login page view
 struct LoginPage: View {
+    @Binding var loggedInUserEmail: String?
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var errorMessage: String = ""
-    @State private var loggedInUserEmail: String? = nil
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                if let userEmail = loggedInUserEmail {
-                    ProductListView(userEmail: userEmail)
-                } else {
-                    Text("Login to your account")
-                        .font(.largeTitle)
+                Text("Login to your account")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+
+                TextField("Email", text: $email)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+
+                SecureField("Password", text: $password)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+
+                Button(action: login) {
+                    Text("Login")
+                        .padding()
                         .fontWeight(.bold)
-
-                    TextField("Email", text: $email)
-                        .padding()
-                        .background(Color(.systemGray6))
+                        .background(Color.blue)
+                        .foregroundColor(.white)
                         .cornerRadius(10)
+                }
+                .padding(.top, 20)
 
-                    SecureField("Password", text: $password)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
-
-                    Button(action: login) {
-                        Text("Login")
-                            .padding()
-                            .fontWeight(.bold)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .padding(.top, 20)
-
-                    if !errorMessage.isEmpty {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                    }
+                if !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
                 }
 
                 Spacer()
@@ -130,11 +132,140 @@ struct LoginPage: View {
     }
 }
 
+// Product Model
+struct Product: Identifiable {
+    var id: Int
+    var name: String
+    var description: String
+    var price: Double
+    var image: String
+}
+
+// Product List View
+struct ProductListView: View {
+    var userEmail: String
+    var logoutAction: () -> Void // Logout action passed from bablaView
+    @State private var cart: [Product] = []
+    
+    let products: [Product] = [
+        Product(id: 1, name: "Apple iPhone 13", description: "Latest iPhone", price: 799, image: "iphone"),
+        Product(id: 2, name: "MacBook Pro", description: "Apple laptop", price: 1299, image: "macbook"),
+        Product(id: 3, name: "Samsung Galaxy S21", description: "Flagship Android", price: 749, image: "samsung"),
+        Product(id: 4, name: "AirPods Pro", description: "Wireless Earbuds", price: 249, image: "airpods"),
+        Product(id: 5, name: "Apple Watch Series 7", description: "Smartwatch", price: 399, image: "applewatch"),
+        Product(id: 6, name: "Google Pixel 6", description: "Latest Android Phone", price: 599, image: "pixel"),
+        Product(id: 7, name: "Sony WH-1000XM4", description: "Noise-cancelling headphones", price: 349, image: "sonyheadphones"),
+        Product(id: 8, name: "Dell XPS 13", description: "Premium Laptop", price: 999, image: "dellxps"),
+        Product(id: 9, name: "iPad Pro 12.9", description: "Tablet for Professionals", price: 1099, image: "ipad"),
+        Product(id: 10, name: "Beats Studio Buds", description: "Wireless Earbuds", price: 149, image: "beats")
+    ]
+    
+    var body: some View {
+        VStack {
+            List(products) { product in
+                HStack {
+                    Image(systemName: product.image)
+                        .resizable()
+                        .frame(width: 50, height: 50)
+                        .cornerRadius(8)
+                    
+                    VStack(alignment: .leading) {
+                        Text(product.name)
+                            .font(.headline)
+                        Text("$\(product.price, specifier: "%.2f")")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        addToCart(product)
+                    }) {
+                        Text("Add to Cart")
+                            .padding(8)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }
+                .padding(.vertical, 5)
+            }
+            
+            Spacer()
+        }
+        .navigationTitle("Products")
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            NavigationLink(destination: CartView(cart: $cart)) {
+                Text("Cart (\(cart.count))")
+            }
+            
+            Button(action: {
+                logoutAction() // Call the logoutAction passed from bablaView
+            }) {
+                Text("Logout")
+                    .foregroundColor(.red)
+            }
+        }
+    }
+    
+    func addToCart(_ product: Product) {
+        cart.append(product)
+    }
+}
 
 
 
 
-//sign up page view
+// Cart View
+struct CartView: View {
+    @Binding var cart: [Product]
+    
+    var body: some View {
+        VStack {
+            List {
+                ForEach(cart) { product in
+                    HStack {
+                        Text(product.name)
+                        Spacer()
+                        Text("$\(product.price, specifier: "%.2f")")
+                    }
+                }
+                .onDelete(perform: deleteProduct)
+            }
+            
+            Spacer()
+            
+            Text("Total: $\(totalPrice(), specifier: "%.2f")")
+                .font(.title)
+                .padding()
+            
+            Button(action: {
+                // Handle checkout action
+            }) {
+                Text("Proceed to Checkout")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(10)
+            }
+            .padding(.bottom, 20)
+        }
+        .navigationTitle("Your Cart")
+    }
+    
+    func totalPrice() -> Double {
+        return cart.reduce(0) { $0 + $1.price }
+    }
+    
+    func deleteProduct(at offsets: IndexSet) {
+        cart.remove(atOffsets: offsets)
+    }
+}
+
+// Sign up page view
 struct SignupPage: View {
     @State private var email: String = ""
     @State private var password: String = ""
@@ -191,16 +322,17 @@ struct SignupPage: View {
             if let error = error {
                 errorMessage = error.localizedDescription
             } else {
-                errorMessage = ""
+                errorMessage = "User signed up successfully.\nPlease go back and log in."
                 print("User signed up successfully")
+                    
             }
         }
     }
 }
 
-//contentview preview
+// Contentview preview
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        LoginPage()
+        LoginPage(loggedInUserEmail: .constant(nil))
     }
 }
