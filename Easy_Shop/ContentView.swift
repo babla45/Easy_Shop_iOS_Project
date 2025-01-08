@@ -32,7 +32,7 @@ struct Product: Identifiable {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         //bablaView()
-        ProductGridView()
+        bablaView()
     }
 }
 
@@ -41,48 +41,75 @@ struct bablaView: View {
     @State private var loggedInUserEmail: String? = nil
 
     var body: some View {
-        NavigationView {
-            VStack {
-                if let email = loggedInUserEmail {
-                    if email == "admin@gmail.com" { // Admin account check
-                        AdminPage()
+        NavigationStack {
+            ZStack {
+                // Background Image
+                Image("front") // This refers to an image in your asset catalog
+                    .resizable()
+                    .scaledToFill()
+                    .edgesIgnoringSafeArea(.all) // This makes the image cover the entire screen
+                    .allowsHitTesting(false) // Ensures the background doesn't block interactions
+
+                VStack {
+                    if let email = loggedInUserEmail {
+                        if email == "admin@gmail.com" { // Admin account check
+                            AdminPage()
+                        } else {
+                            ProductGridView()
+                        }
                     } else {
-                        ProductGridView()
-                    }
-                } else {
-                    Text("Welcome to Easy Shop\n Please login to your account.")
-                        .font(.title)
-                        .foregroundColor(.purple)
+                        VStack {
+                            // Welcome Image
+                            Image("front") // Repeating the background image for a smaller part or another section
+                                .frame(width: 400, height: 390) // Set the size of the image
+                                .cornerRadius(10) // Optionally add rounded corners
 
-                    HStack {
-                        NavigationLink(destination: LoginPage(loggedInUserEmail: $loggedInUserEmail)) {
-                            Text("Login")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                            Text("Welcome to Easy Shop\n Login to your account.")
+                                .font(.title)
                                 .padding()
-                                .background(Color.blue)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
+                                .background(.orange).opacity(0.78)
                                 .cornerRadius(10)
-                        }
-                        .padding()
 
-                        NavigationLink(destination: SignupPage()) {
-                            Text("Signup")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                            HStack {
+                                // Login Button
+                                NavigationLink(destination: LoginPage(loggedInUserEmail: $loggedInUserEmail)) {
+                                    Text("Login")
+                                        .font(.title)
+                                        .fontWeight(.bold)
+                                        .padding(.horizontal, 30)
+                                        .padding(.vertical, 10)
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                }
                                 .padding()
-                                .background(Color.green)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
+
+                                // Signup Button
+                                NavigationLink(destination: SignupPage()) {
+                                    Text("Signup")
+                                        .font(.title)
+                                        .fontWeight(.bold)
+                                        .padding(.horizontal, 30)
+                                        .padding(.vertical, 10)
+                                        .background(Color.green)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                }
+                                .padding()
+                            }
                         }
-                        .padding()
+                        .padding() // Add padding to the content to prevent it from touching the screen edges
                     }
                 }
             }
-            .padding()
         }
     }
 }
+
+
+
 
 // Product Grid View with Firebase Data
 struct ProductGridView: View {
@@ -99,7 +126,7 @@ struct ProductGridView: View {
                             VStack {
                                 if let url = URL(string: product.image) {
                                     AsyncImage(url: url) { image in
-                                        image.frame(width:150, height: 100)
+                                        image.frame(width:145, height: 100)
                                              .cornerRadius(10.0)
                                     } placeholder: {
                                         ProgressView()

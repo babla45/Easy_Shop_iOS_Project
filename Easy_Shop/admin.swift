@@ -144,9 +144,12 @@ struct AdminPage: View {
                     .padding()
                 }
 
-                NavigationLink(destination: bablaView(), isActive: $isLoggedOut) {
+                NavigationLink(destination: bablaView()
+                    .navigationBarBackButtonHidden(true),
+                               isActive: $isLoggedOut) {
                     EmptyView()
-                }
+                }.hidden()
+
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(data: $selectedImageData)
