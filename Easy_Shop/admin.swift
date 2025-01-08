@@ -10,8 +10,8 @@ import Firebase
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseStorage
+import PhotosUI
 
-// Preview Updates
 struct ContentView_Preview: PreviewProvider {
     static var previews: some View {
         AdminPage()
@@ -24,6 +24,9 @@ struct AdminPage: View {
     @State private var isEditing = false
     @State private var errorMessage = ""
     @State private var isLoggedOut = false
+    @State private var selectedImageData: Data? = nil
+    @State private var showImagePicker = false
+    
     let db = Firestore.firestore()
     let storage = Storage.storage()
 
@@ -43,7 +46,23 @@ struct AdminPage: View {
                     TextField("Description", text: $newProduct.description)
                     TextField("Price", value: $newProduct.price, format: .number)
                         .keyboardType(.decimalPad)
-                    TextField("Image Name (Optional)", text: $newProduct.image)
+                    
+                    Button(action: {
+                        showImagePicker = true
+                    }) {
+                        Text(selectedImageData == nil ? "Select Image" : "Change Image")
+                            .font(.title3)
+                            .foregroundColor(.blue)
+                            .padding(.vertical, 10)
+                    }
+                    
+                    if let imageData = selectedImageData, let uiImage = UIImage(data: imageData) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 200)
+                            .cornerRadius(10)
+                    }
 
                     Button(action: {
                         if isEditing {
@@ -59,7 +78,7 @@ struct AdminPage: View {
                             .background(isEditing ? Color.orange : Color.green)
                             .cornerRadius(10)
                     }
-                    .disabled(newProduct.name.isEmpty || newProduct.price <= 0)
+                    .disabled(newProduct.name.isEmpty || newProduct.price <= 0 || selectedImageData == nil)
                 }
 
                 if !errorMessage.isEmpty {
@@ -72,7 +91,11 @@ struct AdminPage: View {
                 List {
                     ForEach(products) { product in
                         HStack {
-                            Text(product.name)
+                            Text(product.name + "\nPrice: \(String(product.price)) $")
+                                .padding(.horizontal, 35.0)
+                                .background(Color.pink.opacity(0.1))
+                                .cornerRadius(5.0)
+
                             Spacer()
                             Button(action: {
                                 editProduct(product)
@@ -100,7 +123,6 @@ struct AdminPage: View {
 
                 // Logout and Products Button
                 HStack {
-                    // Logout Button
                     Button(action: logout) {
                         Text("Logout")
                             .font(.title2)
@@ -126,6 +148,9 @@ struct AdminPage: View {
                     EmptyView()
                 }
             }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(data: $selectedImageData)
+            }
             .onAppear {
                 loadProducts()
             }
@@ -134,23 +159,28 @@ struct AdminPage: View {
 
     // Functions
     func addProduct() {
-        guard !newProduct.name.isEmpty, newProduct.price > 0 else {
-            errorMessage = "Invalid product details."
+        guard let imageData = selectedImageData else {
+            errorMessage = "Please select an image."
             return
         }
 
-        if !newProduct.image.isEmpty {
-            let storageRef = storage.reference().child("images/\(newProduct.image)")
-            storageRef.putData(Data(), metadata: nil) { _, error in
+        let storageRef = storage.reference().child("iOS_project/\(UUID().uuidString).jpg")
+        storageRef.putData(imageData, metadata: nil) { metadata, error in
+            if let error = error {
+                errorMessage = "Image upload failed: \(error.localizedDescription)"
+                return
+            }
+
+            storageRef.downloadURL { url, error in
                 if let error = error {
-                    errorMessage = "Image upload failed: \(error.localizedDescription)"
-                    saveProductData()
+                    errorMessage = "Failed to get image URL: \(error.localizedDescription)"
                     return
                 }
+
+                guard let imageUrl = url?.absoluteString else { return }
+                newProduct.image = imageUrl
                 saveProductData()
             }
-        } else {
-            saveProductData()
         }
     }
 
@@ -169,6 +199,7 @@ struct AdminPage: View {
             } else {
                 errorMessage = ""
                 newProduct = Product(id: UUID().uuidString, name: "", description: "", price: 0, image: "")
+                selectedImageData = nil
                 loadProducts()
             }
         }
@@ -228,12 +259,53 @@ struct AdminPage: View {
         }
     }
 
+
     func logout() {
         do {
             try Auth.auth().signOut()
             isLoggedOut = true
         } catch {
             errorMessage = "Error logging out: \(error.localizedDescription)"
+        }
+    }
+}
+
+// Image Picker for selecting images from the device
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var data: Data?
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.filter = .images
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let parent: ImagePicker
+
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+            guard let provider = results.first?.itemProvider, provider.canLoadObject(ofClass: UIImage.self) else { return }
+
+            provider.loadObject(ofClass: UIImage.self) { image, _ in
+                if let uiImage = image as? UIImage, let data = uiImage.jpegData(compressionQuality: 0.8) {
+                    DispatchQueue.main.async {
+                        self.parent.data = data
+                    }
+                }
+            }
         }
     }
 }

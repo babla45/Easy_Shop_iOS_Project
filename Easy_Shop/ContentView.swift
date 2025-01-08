@@ -19,26 +19,21 @@ struct FirebaseLab3App: App {
     }
 }
 
-
 // Product Model
 struct Product: Identifiable {
     var id: String
     var name: String
     var description: String
     var price: Double
-    var image: String
+    var image: String // Firebase Storage URL
 }
-
 
 // Preview Updates
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        //bablaView()
-        AdminPage()
+        bablaView()
     }
 }
-
-
 
 // Main Navigation Update
 struct bablaView: View {
@@ -88,11 +83,10 @@ struct bablaView: View {
     }
 }
 
-
-
 // Product Grid View with Firebase Data
 struct ProductGridView: View {
     @State private var products: [Product] = []
+    @State private var cart: [Product] = [] // State variable for cart
     let db = Firestore.firestore()
 
     var body: some View {
@@ -100,13 +94,16 @@ struct ProductGridView: View {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150))]) {
                     ForEach(products) { product in
-                        NavigationLink(destination: ProductDetailView(product: product)) {
+                        NavigationLink(destination: ProductDetailView(product: product, cart: $cart)) {
                             VStack {
-                                if !product.image.isEmpty {
-                                    Image(systemName: product.image)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(height: 100)
+                                if let url = URL(string: product.image) {
+                                    AsyncImage(url: url) { image in
+                                        image.resizable()
+                                             .aspectRatio(contentMode: .fit)
+                                             .frame(height: 100)
+                                    } placeholder: {
+                                        ProgressView()
+                                    }
                                 } else {
                                     Rectangle()
                                         .fill(Color.gray)
@@ -114,6 +111,9 @@ struct ProductGridView: View {
                                 }
                                 Text(product.name)
                                     .font(.headline)
+                                Text("$\(product.price, specifier: "%.2f")")
+                                    .foregroundColor(.green)
+                                    .font(.subheadline)
                             }
                             .padding()
                             .background(Color(.systemGray6))
@@ -126,6 +126,15 @@ struct ProductGridView: View {
             .navigationTitle("Products")
             .onAppear {
                 loadProducts()
+            }
+            .toolbar {
+                NavigationLink(destination: CartView(cart: $cart)) {
+                    HStack {
+                        Image(systemName: "cart")
+                        Text("Cart (\(cart.count))")
+                            .font(.subheadline)
+                    }
+                }
             }
         }
     }
@@ -154,14 +163,18 @@ struct ProductGridView: View {
 // Product Detail View
 struct ProductDetailView: View {
     var product: Product
+    @Binding var cart: [Product]
 
     var body: some View {
         VStack {
-            if !product.image.isEmpty {
-                Image(systemName: product.image) // Replace with actual image fetching if using Firebase Storage
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: 200)
+            if let url = URL(string: product.image) {
+                AsyncImage(url: url) { image in
+                    image.resizable()
+                         .aspectRatio(contentMode: .fit)
+                         .frame(height: 200)
+                } placeholder: {
+                    ProgressView()
+                }
             }
             Text(product.name)
                 .font(.title)
@@ -177,13 +190,24 @@ struct ProductDetailView: View {
                 .padding()
 
             Spacer()
+
+            Button(action: {
+                if !cart.contains(where: { $0.id == product.id }) {
+                    cart.append(product)
+                }
+            }) {
+                Text("Add to Cart")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(10)
+            }
         }
         .navigationTitle("Product Details")
         .padding()
     }
 }
-
-
 
 // Cart View
 struct CartView: View {
@@ -231,3 +255,4 @@ struct CartView: View {
         cart.remove(atOffsets: offsets)
     }
 }
+
