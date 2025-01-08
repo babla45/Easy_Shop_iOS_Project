@@ -31,7 +31,8 @@ struct Product: Identifiable {
 // Preview Updates
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        bablaView()
+        //bablaView()
+        ProductGridView()
     }
 }
 
@@ -49,7 +50,7 @@ struct bablaView: View {
                         ProductGridView()
                     }
                 } else {
-                    Text("Welcome to Easy Shop")
+                    Text("Welcome to Easy Shop\n Please login to your account.")
                         .font(.title)
                         .foregroundColor(.purple)
 
@@ -101,6 +102,7 @@ struct ProductGridView: View {
                                         image.resizable()
                                              .aspectRatio(contentMode: .fit)
                                              .frame(height: 100)
+                                             .cornerRadius(10.0)
                                     } placeholder: {
                                         ProgressView()
                                     }
@@ -172,22 +174,28 @@ struct ProductDetailView: View {
                     image.resizable()
                          .aspectRatio(contentMode: .fit)
                          .frame(height: 200)
+                         .cornerRadius(15)
                 } placeholder: {
                     ProgressView()
                 }
             }
-            Text(product.name)
-                .font(.title)
+            Text("Product Name:\n" + product.name)
+                .font(.title2)
                 .padding()
+                .fontWeight(.bold)
+                .foregroundColor(.purple)
 
-            Text(product.description)
+            Text("Product Description:\n" + product.description)
                 .font(.body)
                 .padding()
+                .foregroundColor(.blue)
+                .fontWeight(.bold)
 
-            Text("$\(product.price, specifier: "%.2f")")
+            Text("Price: $\(String(format: "%.2f", product.price))")
                 .font(.title2)
                 .foregroundColor(.green)
                 .padding()
+                .fontWeight(.bold)
 
             Spacer()
 
