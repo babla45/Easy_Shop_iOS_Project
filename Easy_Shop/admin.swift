@@ -158,6 +158,7 @@ struct AdminPage: View {
     }
 
     // Functions
+
     func addProduct() {
         guard let imageData = selectedImageData else {
             errorMessage = "Please select an image."
@@ -197,15 +198,58 @@ struct AdminPage: View {
             if let error = error {
                 errorMessage = "Error adding product: \(error.localizedDescription)"
             } else {
-                errorMessage = ""
+                errorMessage = "Product added successfully!"
                 newProduct = Product(id: UUID().uuidString, name: "", description: "", price: 0, image: "")
-                selectedImageData = nil
+                selectedImageData = nil // Clear selected image
                 loadProducts()
             }
         }
     }
 
+//----------
+    
     func updateProduct() {
+        if let imageData = selectedImageData {
+            // Delete old image from storage if it exists
+            if !newProduct.image.isEmpty {
+                let oldImageRef = storage.reference(forURL: newProduct.image)
+                oldImageRef.delete { error in
+                    if let error = error {
+                        print("Error deleting old image: \(error.localizedDescription)")
+                    } else {
+                        print("Old image deleted successfully.")
+                    }
+                }
+            }
+
+            // Upload the new image
+            let storageRef = storage.reference().child("iOS_project/\(UUID().uuidString).jpg")
+            storageRef.putData(imageData, metadata: nil) { metadata, error in
+                if let error = error {
+                    errorMessage = "Image upload failed: \(error.localizedDescription)"
+                    return
+                }
+
+                storageRef.downloadURL { url, error in
+                    if let error = error {
+                        errorMessage = "Failed to get image URL: \(error.localizedDescription)"
+                        return
+                    }
+
+                    guard let newImageUrl = url?.absoluteString else { return }
+                    newProduct.image = newImageUrl
+
+                    // Update product data with the new image URL
+                    performProductUpdate()
+                }
+            }
+        } else {
+            // No new image selected, proceed to update other details
+            performProductUpdate()
+        }
+    }
+
+    func performProductUpdate() {
         let productData: [String: Any] = [
             "name": newProduct.name,
             "description": newProduct.description,
@@ -218,26 +262,130 @@ struct AdminPage: View {
                 errorMessage = "Error updating product: \(error.localizedDescription)"
             } else {
                 errorMessage = ""
+                errorMessage = "Product updated successfully!"
                 isEditing = false
                 newProduct = Product(id: UUID().uuidString, name: "", description: "", price: 0, image: "")
+                selectedImageData = nil
                 loadProducts()
             }
         }
     }
 
-    func deleteProduct(_ product: Product) {
-        db.collection("products").document(product.id).delete { error in
+
+    func deleteOldImage(from imageUrl: String) {
+        guard !imageUrl.isEmpty else {
+            print("No old image to delete.")
+            return
+        }
+        
+        // Extract the path relative to Firebase Storage
+        if let url = URL(string: imageUrl),
+           let components = url.pathComponents.split(separator: "/").last {
+            let relativePath = "iOS_project/\(components.joined(separator: "/"))"
+            let storageRef = storage.reference(withPath: relativePath)
+
+            storageRef.delete { error in
+                if let error = error {
+                    print("Failed to delete old image: \(error.localizedDescription)")
+                } else {
+                    print("Old image deleted successfully.")
+                }
+            }
+        } else {
+            print("Invalid URL for old image.")
+        }
+    }
+
+    func saveUpdatedProduct() {
+        let productData: [String: Any] = [
+            "name": newProduct.name,
+            "description": newProduct.description,
+            "price": newProduct.price,
+            "image": newProduct.image
+        ]
+        
+        db.collection("products").document(newProduct.id).updateData(productData) { error in
             if let error = error {
-                errorMessage = "Error deleting product: \(error.localizedDescription)"
+                errorMessage = "Error updating product: \(error.localizedDescription)"
             } else {
+                errorMessage = ""
+                errorMessage = "Product updated successfully!"
+                isEditing = false
+                newProduct = Product(id: UUID().uuidString, name: "", description: "", price: 0, image: "")
+                selectedImageData = nil
                 loadProducts()
             }
         }
     }
 
     func editProduct(_ product: Product) {
-        newProduct = product
+        // Assign the selected product to `newProduct` for editing
+        newProduct = Product(
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            image: product.image
+        )
         isEditing = true
+        errorMessage = "" // Clear any previous error messages
+
+        // Load the existing image into selectedImageData for preview
+        if !product.image.isEmpty, let url = URL(string: product.image) {
+            DispatchQueue.global().async {
+                if let data = try? Data(contentsOf: url) {
+                    DispatchQueue.main.async {
+                        selectedImageData = data
+                    }
+                }
+            }
+        }
+    }
+
+    
+//    -------
+
+
+    func deleteProduct(_ product: Product) {
+        if !product.image.isEmpty {
+            let storageRef = storage.reference(forURL: product.image)
+            storageRef.delete { error in
+                if let error = error {
+                    errorMessage = "Error deleting product image: \(error.localizedDescription)"
+                } else {
+                    db.collection("products").document(product.id).delete { error in
+                        if let error = error {
+                            errorMessage = "Error deleting product: \(error.localizedDescription)"
+                        } else {
+                            errorMessage = "Product deleted successfully!"
+                            loadProducts()
+                        }
+                    }
+                }
+            }
+        } else {
+            db.collection("products").document(product.id).delete { error in
+                if let error = error {
+                    errorMessage = "Error deleting product: \(error.localizedDescription)"
+                } else {
+                    errorMessage = "Product deleted successfully!"
+                    loadProducts()
+                }
+            }
+        }
+    }
+
+    func editProduct2(_ product: Product) {
+        newProduct = Product(
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            image: product.image
+        )
+        isEditing = true
+        selectedImageData = nil // Clear the selected image
+        errorMessage = "" // Clear any previous error messages
     }
 
     func loadProducts() {
