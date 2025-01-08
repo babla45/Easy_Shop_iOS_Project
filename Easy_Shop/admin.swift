@@ -74,7 +74,7 @@ struct AdminPage: View {
                         Text(isEditing ? "Update Product" : "Add Product")
                             .font(.title2)
                             .foregroundColor(.white)
-                            .padding()
+                            .padding(.horizontal, 13.0)
                             .background(isEditing ? Color.orange : Color.green)
                             .cornerRadius(10)
                     }
@@ -127,7 +127,7 @@ struct AdminPage: View {
                         Text("Logout")
                             .font(.title2)
                             .foregroundColor(.white)
-                            .padding()
+                            .padding(.horizontal, 13.0)
                             .background(Color.purple)
                             .cornerRadius(10)
                     }
@@ -137,7 +137,7 @@ struct AdminPage: View {
                         Text("Products")
                             .font(.title2)
                             .foregroundColor(.white)
-                            .padding()
+                            .padding(.horizontal, 13.0)
                             .background(Color.blue)
                             .cornerRadius(10)
                     }
