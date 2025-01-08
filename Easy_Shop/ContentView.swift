@@ -99,9 +99,7 @@ struct ProductGridView: View {
                             VStack {
                                 if let url = URL(string: product.image) {
                                     AsyncImage(url: url) { image in
-                                        image.resizable()
-                                             .aspectRatio(contentMode: .fit)
-                                             .frame(height: 100)
+                                        image.frame(width:150, height: 100)
                                              .cornerRadius(10.0)
                                     } placeholder: {
                                         ProgressView()
@@ -166,54 +164,54 @@ struct ProductGridView: View {
 struct ProductDetailView: View {
     var product: Product
     @Binding var cart: [Product]
-
+    
     var body: some View {
-        VStack {
-            if let url = URL(string: product.image) {
-                AsyncImage(url: url) { image in
-                    image.resizable()
-                         .aspectRatio(contentMode: .fit)
-                         .frame(height: 200)
-                         .cornerRadius(15)
-                } placeholder: {
-                    ProgressView()
+        ScrollView {
+            VStack {
+                if let url = URL(string: product.image) {
+                    AsyncImage(url: url) { image in
+                        image.frame(width:365, height: 257)
+                            .cornerRadius(15)
+                    } placeholder: {
+                        ProgressView()
+                    }
                 }
-            }
-            Text("Product Name:\n" + product.name)
-                .font(.title2)
-                .padding()
-                .fontWeight(.bold)
-                .foregroundColor(.purple)
-
-            Text("Product Description:\n" + product.description)
-                .font(.body)
-                .padding()
-                .foregroundColor(.blue)
-                .fontWeight(.bold)
-
-            Text("Price: $\(String(format: "%.2f", product.price))")
-                .font(.title2)
-                .foregroundColor(.green)
-                .padding()
-                .fontWeight(.bold)
-
-            Spacer()
-
-            Button(action: {
-                if !cart.contains(where: { $0.id == product.id }) {
-                    cart.append(product)
-                }
-            }) {
-                Text("Add to Cart")
+                Text("Product Name:\n" + product.name)
                     .font(.title2)
-                    .foregroundColor(.white)
                     .padding()
-                    .background(Color.blue)
-                    .cornerRadius(10)
+                    .fontWeight(.bold)
+                    .foregroundColor(.purple)
+                
+                Text("Product Description:\n" + product.description)
+                    .font(.body)
+                    .padding()
+                    .foregroundColor(.blue)
+                    .fontWeight(.bold)
+                
+                Text("Price: $\(String(format: "%.2f", product.price))")
+                    .font(.title2)
+                    .foregroundColor(.green)
+                    .padding()
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                Button(action: {
+                    if !cart.contains(where: { $0.id == product.id }) {
+                        cart.append(product)
+                    }
+                }) {
+                    Text("Add to Cart")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                }
             }
+            .navigationTitle("Product Details")
+            .padding()
         }
-        .navigationTitle("Product Details")
-        .padding()
     }
 }
 

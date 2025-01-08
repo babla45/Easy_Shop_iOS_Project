@@ -144,7 +144,7 @@ struct AdminPage: View {
                     .padding()
                 }
 
-                NavigationLink(destination: SignupPage(), isActive: $isLoggedOut) {
+                NavigationLink(destination: bablaView(), isActive: $isLoggedOut) {
                     EmptyView()
                 }
             }
