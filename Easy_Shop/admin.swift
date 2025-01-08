@@ -272,51 +272,9 @@ struct AdminPage: View {
     }
 
 
-    func deleteOldImage(from imageUrl: String) {
-        guard !imageUrl.isEmpty else {
-            print("No old image to delete.")
-            return
-        }
-        
-        // Extract the path relative to Firebase Storage
-        if let url = URL(string: imageUrl),
-           let components = url.pathComponents.split(separator: "/").last {
-            let relativePath = "iOS_project/\(components.joined(separator: "/"))"
-            let storageRef = storage.reference(withPath: relativePath)
 
-            storageRef.delete { error in
-                if let error = error {
-                    print("Failed to delete old image: \(error.localizedDescription)")
-                } else {
-                    print("Old image deleted successfully.")
-                }
-            }
-        } else {
-            print("Invalid URL for old image.")
-        }
-    }
 
-    func saveUpdatedProduct() {
-        let productData: [String: Any] = [
-            "name": newProduct.name,
-            "description": newProduct.description,
-            "price": newProduct.price,
-            "image": newProduct.image
-        ]
-        
-        db.collection("products").document(newProduct.id).updateData(productData) { error in
-            if let error = error {
-                errorMessage = "Error updating product: \(error.localizedDescription)"
-            } else {
-                errorMessage = ""
-                errorMessage = "Product updated successfully!"
-                isEditing = false
-                newProduct = Product(id: UUID().uuidString, name: "", description: "", price: 0, image: "")
-                selectedImageData = nil
-                loadProducts()
-            }
-        }
-    }
+
 
     func editProduct(_ product: Product) {
         // Assign the selected product to `newProduct` for editing
@@ -375,18 +333,6 @@ struct AdminPage: View {
         }
     }
 
-    func editProduct2(_ product: Product) {
-        newProduct = Product(
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            image: product.image
-        )
-        isEditing = true
-        selectedImageData = nil // Clear the selected image
-        errorMessage = "" // Clear any previous error messages
-    }
 
     func loadProducts() {
         db.collection("products").getDocuments { snapshot, error in
