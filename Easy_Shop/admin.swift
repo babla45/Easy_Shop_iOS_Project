@@ -131,9 +131,12 @@ struct AdminPage: View {
                             Text("Mobile: \(order.mobileNumber)")
                             Text("Address: \(order.address)")
                             Text("Email: \(order.email)")
+                            Text("Payment Method: \(order.paymentMethod)") // Add payment method
                             ForEach(order.products) { product in
-                                Text("\(product.name) - $\(product.price, specifier: "%.2f")")
+                                Text("\(product.name): $\(product.price, specifier: "%.2f") x \(product.quantity)")
                             }
+                            Text("Total: $\(order.totalPrice, specifier: "%.2f")")
+                                .fontWeight(.bold)
                             Button(action: {
                                 deleteOrder(order)
                             }) {
@@ -388,15 +391,18 @@ struct AdminPage: View {
                         mobileNumber: data["mobileNumber"] as? String ?? "",
                         address: data["address"] as? String ?? "",
                         email: data["email"] as? String ?? "",
+                        paymentMethod: data["paymentMethod"] as? String ?? "", // Add payment method
                         products: (data["products"] as? [[String: Any]])?.compactMap { productData in
                             Product(
                                 id: productData["id"] as? String ?? "",
                                 name: productData["name"] as? String ?? "",
                                 description: "",
                                 price: productData["price"] as? Double ?? 0,
-                                image: ""
+                                image: "",
+                                quantity: productData["quantity"] as? Int ?? 1
                             )
-                        } ?? []
+                        } ?? [],
+                        totalPrice: (data["products"] as? [[String: Any]])?.reduce(0) { $0 + (($1["price"] as? Double ?? 0) * Double($1["quantity"] as? Int ?? 1)) } ?? 0
                     )
                 } ?? []
             }
@@ -471,5 +477,7 @@ struct Order: Identifiable {
     var mobileNumber: String
     var address: String
     var email: String
+    var paymentMethod: String // Add payment method
     var products: [Product]
+    var totalPrice: Double
 }

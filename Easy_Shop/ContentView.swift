@@ -26,6 +26,7 @@ struct Product: Identifiable {
     var description: String
     var price: Double
     var image: String // Firebase Storage URL
+    var quantity: Int = 1 // Add quantity property
 }
 
 // Preview Updates
@@ -116,6 +117,7 @@ struct ProductGridView: View {
     @Binding var loggedInUserEmail: String?
     @State private var isLoggedOut = false
     @State private var showFlashMessage = false
+    @State private var navigateToUserOrders = false
 
     var body: some View {
         VStack {
@@ -123,13 +125,14 @@ struct ProductGridView: View {
                 Text("User: \(loggedInUserEmail ?? "Unknown")")
                     .font(.subheadline)
                     .padding()
+                    .foregroundColor(.purple)
                 Spacer()
                 Button(action: logout) {
                     Text("Logout")
                         .font(.subheadline)
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 5)
                         .background(Color.red)
                         .cornerRadius(10)
                 }
@@ -184,7 +187,7 @@ struct ProductGridView: View {
                 loadProducts()
             }
             .toolbar {
-                NavigationLink(destination: CartView(cart: $cart)) {
+                NavigationLink(destination: CartView(cart: $cart, loggedInUserEmail: $loggedInUserEmail)) {
                     HStack {
                         Image(systemName: "cart")
                         Text("Cart (\(cart.count))")
@@ -194,6 +197,23 @@ struct ProductGridView: View {
             }
             .background(
                 NavigationLink(destination: bablaView().navigationBarBackButtonHidden(true), isActive: $isLoggedOut) {
+                    EmptyView()
+                }
+            )
+
+            Button(action: {
+                navigateToUserOrders = true
+            }) {
+                Text("View Your Orders")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 15)
+                    .background(Color.blue)
+                    .cornerRadius(10)
+            }
+            .padding(.bottom, 20)
+            .background(
+                NavigationLink(destination: UserOrdersView(loggedInUserEmail: $loggedInUserEmail), isActive: $navigateToUserOrders) {
                     EmptyView()
                 }
             )
@@ -280,7 +300,8 @@ struct ProductDetailView: View {
                     Text("Add to Cart")
                         .font(.title2)
                         .foregroundColor(.white)
-                        .padding()
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
                         .background(Color.blue)
                         .cornerRadius(10)
                 }
@@ -307,7 +328,8 @@ struct CartView: View {
     @Binding var cart: [Product]
     @State private var quantities: [String: Int] = [:]
     @State private var navigateToCheckout = false
-    
+    @Binding var loggedInUserEmail: String?
+
     var body: some View {
         VStack {
             List {
@@ -356,13 +378,14 @@ struct CartView: View {
                 Text("Proceed to Checkout")
                     .font(.title2)
                     .foregroundColor(.white)
-                    .padding()
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 7)
                     .background(Color.green)
                     .cornerRadius(10)
             }
             .padding(.bottom, 20)
             .background(
-                NavigationLink(destination: CheckoutView(cart: $cart), isActive: $navigateToCheckout) {
+                NavigationLink(destination: CheckoutView(cart: $cart, loggedInUserEmail: $loggedInUserEmail), isActive: $navigateToCheckout) {
                     EmptyView()
                 }
             )
@@ -396,11 +419,16 @@ struct CartView: View {
 // Checkout View
 struct CheckoutView: View {
     @Binding var cart: [Product]
+    @State private var name: String = "" // Add name state
     @State private var mobileNumber: String = ""
     @State private var address: String = ""
     @State private var email: String = ""
+    @State private var paymentMethod: String = "Cash on Delivery" // Add payment method state
     @State private var showSuccessMessage: Bool = false
     @Environment(\.presentationMode) var presentationMode
+    @State private var quantities: [String: Int] = [:]
+    @Binding var loggedInUserEmail: String?
+    @State private var navigateToProductGrid = false
 
     let db = Firestore.firestore()
 
@@ -409,6 +437,11 @@ struct CheckoutView: View {
             Text("Checkout")
                 .font(.largeTitle)
                 .fontWeight(.bold)
+
+            TextField("Name", text: $name) // Add name field
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
 
             TextField("Mobile Number", text: $mobileNumber)
                 .padding()
@@ -424,6 +457,20 @@ struct CheckoutView: View {
                 .padding()
                 .background(Color(.systemGray6))
                 .cornerRadius(10)
+                .disabled(true) // Disable editing
+
+            Text("Payment Method")
+                .font(.headline)
+                .padding(.top, 10)
+
+            Picker("Payment Method", selection: $paymentMethod) {
+                Text("Cash on Delivery").tag("Cash on Delivery")
+                // Add more payment methods here if needed
+            }
+            .pickerStyle(MenuPickerStyle())
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(10)
 
             Button(action: placeOrder) {
                 Text("Place Order")
@@ -442,14 +489,33 @@ struct CheckoutView: View {
             Spacer()
         }
         .padding()
+        .onAppear {
+            initializeQuantities()
+            email = loggedInUserEmail ?? ""
+        }
+        .background(
+            NavigationLink(destination: ProductGridView(loggedInUserEmail: $loggedInUserEmail).navigationBarBackButtonHidden(true), isActive: $navigateToProductGrid) {
+                EmptyView()
+            }
+        )
+    }
+
+    func initializeQuantities() {
+        for product in cart {
+            if quantities[product.id] == nil {
+                quantities[product.id] = 1
+            }
+        }
     }
 
     func placeOrder() {
         let orderData: [String: Any] = [
+            "name": name, // Add name to order data
             "mobileNumber": mobileNumber,
             "address": address,
             "email": email,
-            "products": cart.map { ["id": $0.id, "name": $0.name, "price": $0.price] }
+            "paymentMethod": paymentMethod, // Add payment method to order data
+            "products": cart.map { ["id": $0.id, "name": $0.name, "price": $0.price, "quantity": quantities[$0.id] ?? 1] }
         ]
 
         db.collection("orders").addDocument(data: orderData) { error in
@@ -458,8 +524,77 @@ struct CheckoutView: View {
             } else {
                 showSuccessMessage = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    self.presentationMode.wrappedValue.dismiss()
+                    cart.removeAll()
+                    navigateToProductGrid = true
                 }
+            }
+        }
+    }
+}
+
+// User Orders View
+struct UserOrdersView: View {
+    @Binding var loggedInUserEmail: String?
+    @State private var orders: [Order] = []
+    let db = Firestore.firestore()
+
+    var body: some View {
+        VStack {
+            Text("Your Orders")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .padding()
+
+            List {
+                ForEach(orders) { order in
+                    VStack(alignment: .leading) {
+                        Text("Order ID: \(order.id)")
+                        Text("Mobile: \(order.mobileNumber)")
+                        Text("Address: \(order.address)")
+                        Text("Email: \(order.email)")
+                        Text("Payment Method: \(order.paymentMethod)") // Add payment method display
+                        ForEach(order.products) { product in
+                            Text("\(product.name) - $\(product.price, specifier: "%.2f") x \(product.quantity)")
+                        }
+                        Text("Total: $\(order.totalPrice, specifier: "%.2f")")
+                            .fontWeight(.bold)
+                    }
+                    .padding()
+                }
+            }
+        }
+        .onAppear {
+            loadUserOrders()
+        }
+    }
+
+    func loadUserOrders() {
+        guard let email = loggedInUserEmail else { return }
+        db.collection("orders").whereField("email", isEqualTo: email).getDocuments { snapshot, error in
+            if let error = error {
+                print("Error loading orders: \(error.localizedDescription)")
+            } else {
+                orders = snapshot?.documents.compactMap { doc -> Order? in
+                    let data = doc.data()
+                    return Order(
+                        id: doc.documentID,
+                        mobileNumber: data["mobileNumber"] as? String ?? "",
+                        address: data["address"] as? String ?? "",
+                        email: data["email"] as? String ?? "",
+                        paymentMethod: data["paymentMethod"] as? String ?? "", // Add payment method
+                        products: (data["products"] as? [[String: Any]])?.compactMap { productData in
+                            Product(
+                                id: productData["id"] as? String ?? "",
+                                name: productData["name"] as? String ?? "",
+                                description: "",
+                                price: productData["price"] as? Double ?? 0,
+                                image: "",
+                                quantity: productData["quantity"] as? Int ?? 1
+                            )
+                        } ?? [],
+                        totalPrice: (data["products"] as? [[String: Any]])?.reduce(0) { $0 + (($1["price"] as? Double ?? 0) * Double($1["quantity"] as? Int ?? 1)) } ?? 0
+                    )
+                } ?? []
             }
         }
     }
