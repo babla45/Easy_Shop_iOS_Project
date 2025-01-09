@@ -14,7 +14,7 @@ import PhotosUI
 
 struct ContentView_Preview: PreviewProvider {
     static var previews: some View {
-        AdminPage()
+        AdminPage(loggedInUserEmail: .constant(nil))
     }
 }
 
@@ -26,7 +26,8 @@ struct AdminPage: View {
     @State private var isLoggedOut = false
     @State private var selectedImageData: Data? = nil
     @State private var showImagePicker = false
-    
+    @Binding var loggedInUserEmail: String?
+
     let db = Firestore.firestore()
     let storage = Storage.storage()
 
@@ -133,7 +134,7 @@ struct AdminPage: View {
                     }
                     .padding()
                     
-                    NavigationLink(destination: ProductGridView()) {
+                    NavigationLink(destination: ProductGridView(loggedInUserEmail: $loggedInUserEmail).navigationBarBackButtonHidden(false)) {
                         Text("Products")
                             .font(.title2)
                             .foregroundColor(.white)
@@ -214,7 +215,7 @@ struct AdminPage: View {
     func updateProduct() {
         if let imageData = selectedImageData {
             // Delete old image from storage if it exists
-            if !newProduct.image.isEmpty {
+            if (!newProduct.image.isEmpty) {
                 let oldImageRef = storage.reference(forURL: newProduct.image)
                 oldImageRef.delete { error in
                     if let error = error {
@@ -308,7 +309,7 @@ struct AdminPage: View {
 
 
     func deleteProduct(_ product: Product) {
-        if !product.image.isEmpty {
+        if (!product.image.isEmpty) {
             let storageRef = storage.reference(forURL: product.image)
             storageRef.delete { error in
                 if let error = error {
@@ -360,6 +361,7 @@ struct AdminPage: View {
     func logout() {
         do {
             try Auth.auth().signOut()
+            loggedInUserEmail = nil
             isLoggedOut = true
         } catch {
             errorMessage = "Error logging out: \(error.localizedDescription)"

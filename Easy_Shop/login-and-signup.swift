@@ -62,10 +62,10 @@ struct LoginPage: View {
             .padding()
             .background(
                 Group {
-                    NavigationLink(destination: ProductGridView().navigationBarBackButtonHidden(true), isActive: $navigateToProductGrid) {
+                    NavigationLink(destination: ProductGridView(loggedInUserEmail: $loggedInUserEmail).navigationBarBackButtonHidden(true), isActive: $navigateToProductGrid) {
                         EmptyView()
                     }
-                    NavigationLink(destination: AdminPage().navigationBarBackButtonHidden(true), isActive: $navigateToAdminPage) {
+                    NavigationLink(destination: AdminPage(loggedInUserEmail: $loggedInUserEmail).navigationBarBackButtonHidden(true), isActive: $navigateToAdminPage) {
                         EmptyView()
                     }
                 }

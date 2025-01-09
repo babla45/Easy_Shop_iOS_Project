@@ -53,9 +53,9 @@ struct bablaView: View {
                 VStack {
                     if let email = loggedInUserEmail {
                         if email == "admin@gmail.com" { // Admin account check
-                            AdminPage()
+                            AdminPage(loggedInUserEmail: $loggedInUserEmail)
                         } else {
-                            ProductGridView()
+                            ProductGridView(loggedInUserEmail: $loggedInUserEmail)
                         }
                     } else {
                         VStack {
@@ -108,17 +108,34 @@ struct bablaView: View {
     }
 }
 
-
-
-
 // Product Grid View with Firebase Data
 struct ProductGridView: View {
     @State private var products: [Product] = []
     @State private var cart: [Product] = [] // State variable for cart
     let db = Firestore.firestore()
+    @Binding var loggedInUserEmail: String?
+    @State private var isLoggedOut = false
 
     var body: some View {
-        NavigationView {
+        VStack {
+            HStack {
+                Text("User: \(loggedInUserEmail ?? "Unknown")")
+                    .font(.subheadline)
+                    .padding()
+                Spacer()
+                Button(action: logout) {
+                    Text("Logout")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.red)
+                        .cornerRadius(10)
+                }
+                .padding()
+            }
+            .padding(.horizontal)
+
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150))]) {
                     ForEach(products) { product in
@@ -163,7 +180,13 @@ struct ProductGridView: View {
                     }
                 }
             }
+            .background(
+                NavigationLink(destination: bablaView().navigationBarBackButtonHidden(true), isActive: $isLoggedOut) {
+                    EmptyView()
+                }
+            )
         }
+        .navigationBarBackButtonHidden(true)
     }
 
     func loadProducts() {
@@ -184,8 +207,17 @@ struct ProductGridView: View {
             }
         }
     }
-}
 
+    func logout() {
+        do {
+            try Auth.auth().signOut()
+            loggedInUserEmail = nil
+            isLoggedOut = true
+        } catch let signOutError as NSError {
+            print("Error signing out: %@", signOutError)
+        }
+    }
+}
 
 // Product Detail View
 struct ProductDetailView: View {
