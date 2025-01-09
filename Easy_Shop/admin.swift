@@ -26,6 +26,7 @@ struct AdminPage: View {
     @State private var isLoggedOut = false
     @State private var selectedImageData: Data? = nil
     @State private var showImagePicker = false
+    @State private var orders: [Order] = []
     @Binding var loggedInUserEmail: String?
 
     let db = Firestore.firestore()
@@ -122,6 +123,28 @@ struct AdminPage: View {
                     }
                 }
 
+                // Orders List
+                List {
+                    ForEach(orders) { order in
+                        VStack(alignment: .leading) {
+                            Text("Order ID: \(order.id)")
+                            Text("Mobile: \(order.mobileNumber)")
+                            Text("Address: \(order.address)")
+                            Text("Email: \(order.email)")
+                            ForEach(order.products) { product in
+                                Text("\(product.name) - $\(product.price, specifier: "%.2f")")
+                            }
+                            Button(action: {
+                                deleteOrder(order)
+                            }) {
+                                Text("Delete Order")
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        .padding()
+                    }
+                }
+
                 // Logout and Products Button
                 HStack {
                     Button(action: logout) {
@@ -157,6 +180,7 @@ struct AdminPage: View {
             }
             .onAppear {
                 loadProducts()
+                loadOrders()
             }
         }
     }
@@ -275,11 +299,6 @@ struct AdminPage: View {
         }
     }
 
-
-
-
-
-
     func editProduct(_ product: Product) {
         // Assign the selected product to `newProduct` for editing
         newProduct = Product(
@@ -357,6 +376,43 @@ struct AdminPage: View {
         }
     }
 
+    func loadOrders() {
+        db.collection("orders").getDocuments { snapshot, error in
+            if let error = error {
+                errorMessage = "Error loading orders: \(error.localizedDescription)"
+            } else {
+                orders = snapshot?.documents.compactMap { doc -> Order? in
+                    let data = doc.data()
+                    return Order(
+                        id: doc.documentID,
+                        mobileNumber: data["mobileNumber"] as? String ?? "",
+                        address: data["address"] as? String ?? "",
+                        email: data["email"] as? String ?? "",
+                        products: (data["products"] as? [[String: Any]])?.compactMap { productData in
+                            Product(
+                                id: productData["id"] as? String ?? "",
+                                name: productData["name"] as? String ?? "",
+                                description: "",
+                                price: productData["price"] as? Double ?? 0,
+                                image: ""
+                            )
+                        } ?? []
+                    )
+                } ?? []
+            }
+        }
+    }
+
+    func deleteOrder(_ order: Order) {
+        db.collection("orders").document(order.id).delete { error in
+            if let error = error {
+                errorMessage = "Error deleting order: \(error.localizedDescription)"
+            } else {
+                errorMessage = "Order deleted successfully!"
+                loadOrders()
+            }
+        }
+    }
 
     func logout() {
         do {
@@ -407,4 +463,13 @@ struct ImagePicker: UIViewControllerRepresentable {
             }
         }
     }
+}
+
+// Order Model
+struct Order: Identifiable {
+    var id: String
+    var mobileNumber: String
+    var address: String
+    var email: String
+    var products: [Product]
 }

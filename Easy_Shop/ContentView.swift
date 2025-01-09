@@ -306,6 +306,7 @@ struct ProductDetailView: View {
 struct CartView: View {
     @Binding var cart: [Product]
     @State private var quantities: [String: Int] = [:]
+    @State private var navigateToCheckout = false
     
     var body: some View {
         VStack {
@@ -350,7 +351,7 @@ struct CartView: View {
                 .padding()
             
             Button(action: {
-                // Handle checkout action
+                navigateToCheckout = true
             }) {
                 Text("Proceed to Checkout")
                     .font(.title2)
@@ -360,6 +361,11 @@ struct CartView: View {
                     .cornerRadius(10)
             }
             .padding(.bottom, 20)
+            .background(
+                NavigationLink(destination: CheckoutView(cart: $cart), isActive: $navigateToCheckout) {
+                    EmptyView()
+                }
+            )
         }
         .navigationTitle("Your Cart")
         .onAppear {
@@ -383,6 +389,78 @@ struct CartView: View {
         if let index = cart.firstIndex(where: { $0.id == product.id }) {
             quantities[product.id] = nil
             cart.remove(at: index)
+        }
+    }
+}
+
+// Checkout View
+struct CheckoutView: View {
+    @Binding var cart: [Product]
+    @State private var mobileNumber: String = ""
+    @State private var address: String = ""
+    @State private var email: String = ""
+    @State private var showSuccessMessage: Bool = false
+    @Environment(\.presentationMode) var presentationMode
+
+    let db = Firestore.firestore()
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Checkout")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            TextField("Mobile Number", text: $mobileNumber)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+
+            TextField("Address", text: $address)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+
+            TextField("Email", text: $email)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+
+            Button(action: placeOrder) {
+                Text("Place Order")
+                    .padding()
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            .padding(.top, 20)
+
+            if showSuccessMessage {
+                Text("Order placed successfully!")
+                    .foregroundColor(.green)
+            }
+
+            Spacer()
+        }
+        .padding()
+    }
+
+    func placeOrder() {
+        let orderData: [String: Any] = [
+            "mobileNumber": mobileNumber,
+            "address": address,
+            "email": email,
+            "products": cart.map { ["id": $0.id, "name": $0.name, "price": $0.price] }
+        ]
+
+        db.collection("orders").addDocument(data: orderData) { error in
+            if let error = error {
+                print("Error placing order: \(error.localizedDescription)")
+            } else {
+                showSuccessMessage = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.presentationMode.wrappedValue.dismiss()
+                }
+            }
         }
     }
 }
