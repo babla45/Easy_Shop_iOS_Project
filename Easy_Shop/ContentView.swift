@@ -115,6 +115,7 @@ struct ProductGridView: View {
     let db = Firestore.firestore()
     @Binding var loggedInUserEmail: String?
     @State private var isLoggedOut = false
+    @State private var showFlashMessage = false
 
     var body: some View {
         VStack {
@@ -136,10 +137,21 @@ struct ProductGridView: View {
             }
             .padding(.horizontal)
 
+            if showFlashMessage {
+                Text("Product added to cart!")
+                    .foregroundColor(.green)
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(10)
+                    .shadow(radius: 10)
+                    .transition(.slide)
+                    .animation(.easeInOut)
+            }
+
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150))]) {
                     ForEach(products) { product in
-                        NavigationLink(destination: ProductDetailView(product: product, cart: $cart)) {
+                        NavigationLink(destination: ProductDetailView(product: product, cart: $cart, showFlashMessage: $showFlashMessage)) {
                             VStack {
                                 if let url = URL(string: product.image) {
                                     AsyncImage(url: url) { image in
@@ -223,6 +235,7 @@ struct ProductGridView: View {
 struct ProductDetailView: View {
     var product: Product
     @Binding var cart: [Product]
+    @Binding var showFlashMessage: Bool
     
     var body: some View {
         ScrollView {
@@ -258,6 +271,10 @@ struct ProductDetailView: View {
                 Button(action: {
                     if !cart.contains(where: { $0.id == product.id }) {
                         cart.append(product)
+                        showFlashMessage = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            showFlashMessage = false
+                        }
                     }
                 }) {
                     Text("Add to Cart")
@@ -266,6 +283,17 @@ struct ProductDetailView: View {
                         .padding()
                         .background(Color.blue)
                         .cornerRadius(10)
+                }
+
+                if showFlashMessage {
+                    Text("Product added to cart!")
+                        .foregroundColor(.green)
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(radius: 10)
+                        .transition(.slide)
+                        .animation(.easeInOut)
                 }
             }
             .navigationTitle("Product Details")
