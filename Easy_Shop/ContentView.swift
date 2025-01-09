@@ -118,11 +118,12 @@ struct ProductGridView: View {
     @State private var isLoggedOut = false
     @State private var showFlashMessage = false
     @State private var navigateToUserOrders = false
+    @State private var navigateToNews = false // State for navigating to news
 
     var body: some View {
         VStack {
             HStack {
-                Text("User: \(loggedInUserEmail ?? "Unknown")")
+                Text("Username: \(loggedInUserEmail ?? "Unknown")")
                     .font(.subheadline)
                     .padding()
                     .foregroundColor(.purple)
@@ -139,6 +140,18 @@ struct ProductGridView: View {
                 .padding()
             }
             .padding(.horizontal)
+
+            NavigationLink(destination: NewsView(), isActive: $navigateToNews) {
+                Text("        Top News")
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+                    .padding(.bottom, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)  // Align to the left
+                    .onTapGesture {
+                        navigateToNews = true
+                    }
+            }
+
 
             if showFlashMessage {
                 Text("Product added to cart!")
@@ -598,5 +611,62 @@ struct UserOrdersView: View {
             }
         }
     }
+}
+
+// News View to display top news
+struct NewsView: View {
+    @State private var articles: [Article] = []
+
+    var body: some View {
+        VStack {
+            Text("Top News")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .padding()
+
+            List(articles) { article in
+                VStack(alignment: .leading) {
+                    Text(article.title)
+                        .font(.headline)
+                    Text(article.description ?? "")
+                        .font(.subheadline)
+                }
+                .padding()
+            }
+        }
+        .onAppear {
+            fetchNews()
+        }
+    }
+
+    func fetchNews() {
+        let apiKey = "9ce4922f100146e38f8b2650c8361aaa"
+        let urlString = "https://newsapi.org/v2/top-headlines?country=us&apiKey=\(apiKey)"
+        guard let url = URL(string: urlString) else { return }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let data = data {
+                do {
+                    let newsResponse = try JSONDecoder().decode(NewsResponse.self, from: data)
+                    DispatchQueue.main.async {
+                        self.articles = newsResponse.articles
+                    }
+                } catch {
+                    print("Error decoding news data: \(error)")
+                }
+            }
+        }.resume()
+    }
+}
+
+// Models for News API response
+struct NewsResponse: Codable {
+    let articles: [Article]
+}
+
+struct Article: Codable, Identifiable {
+    let id = UUID()
+    let title: String
+    let description: String?
 }
 
