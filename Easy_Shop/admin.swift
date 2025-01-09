@@ -128,6 +128,7 @@ struct AdminPage: View {
                     ForEach(orders) { order in
                         VStack(alignment: .leading) {
                             Text("Order ID: \(order.id)")
+                            Text("Name: \(order.name)") // Add name display
                             Text("Mobile: \(order.mobileNumber)")
                             Text("Address: \(order.address)")
                             Text("Email: \(order.email)")
@@ -143,8 +144,10 @@ struct AdminPage: View {
                                 Text("Delete Order")
                                     .foregroundColor(.red)
                             }
+                            .buttonStyle(BorderlessButtonStyle()) // Ensure button style is borderless
                         }
                         .padding()
+                        .contentShape(Rectangle()) // Make the entire VStack tappable
                     }
                 }
 
@@ -388,6 +391,7 @@ struct AdminPage: View {
                     let data = doc.data()
                     return Order(
                         id: doc.documentID,
+                        name: data["name"] as? String ?? "", // Add name
                         mobileNumber: data["mobileNumber"] as? String ?? "",
                         address: data["address"] as? String ?? "",
                         email: data["email"] as? String ?? "",
@@ -474,6 +478,7 @@ struct ImagePicker: UIViewControllerRepresentable {
 // Order Model
 struct Order: Identifiable {
     var id: String
+    var name: String // Add name
     var mobileNumber: String
     var address: String
     var email: String

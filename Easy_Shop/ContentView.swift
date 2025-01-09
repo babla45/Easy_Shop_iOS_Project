@@ -142,7 +142,7 @@ struct ProductGridView: View {
             .padding(.horizontal)
 
             NavigationLink(destination: NewsView(), isActive: $navigateToNews) {
-                Text("        Top News")
+                Text("        View Top News")
                     .font(.subheadline)
                     .foregroundColor(.blue)
                     .padding(.bottom, 10)
@@ -562,6 +562,7 @@ struct UserOrdersView: View {
                 ForEach(orders) { order in
                     VStack(alignment: .leading) {
                         Text("Order ID: \(order.id)")
+                        Text("Name: \(order.name)") // Add name display
                         Text("Mobile: \(order.mobileNumber)")
                         Text("Address: \(order.address)")
                         Text("Email: \(order.email)")
@@ -591,6 +592,7 @@ struct UserOrdersView: View {
                     let data = doc.data()
                     return Order(
                         id: doc.documentID,
+                        name: data["name"] as? String ?? "", // Add name
                         mobileNumber: data["mobileNumber"] as? String ?? "",
                         address: data["address"] as? String ?? "",
                         email: data["email"] as? String ?? "",
@@ -622,6 +624,7 @@ struct NewsView: View {
             Text("Top News")
                 .font(.largeTitle)
                 .fontWeight(.bold)
+                .foregroundColor(.orange)
                 .padding()
 
             List(articles) { article in
