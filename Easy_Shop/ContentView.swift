@@ -305,18 +305,42 @@ struct ProductDetailView: View {
 // Cart View
 struct CartView: View {
     @Binding var cart: [Product]
+    @State private var quantities: [String: Int] = [:]
     
     var body: some View {
         VStack {
             List {
                 ForEach(cart) { product in
-                    HStack {
+                    VStack(alignment: .leading) {
                         Text(product.name)
-                        Spacer()
-                        Text("$\(product.price, specifier: "%.2f")")
+                            .font(.headline)
+                        
+                        HStack {
+                            Stepper(
+                                value: Binding(
+                                    get: { quantities[product.id] ?? 1 },
+                                    set: { quantities[product.id] = $0 }
+                                ),
+                                in: 1...99
+                            ) {
+                                HStack {
+                                    Text("Quantity: \(quantities[product.id] ?? 1)")
+                                    Spacer()
+                                    Text("$\(product.price * Double(quantities[product.id] ?? 1), specifier: "%.2f")")
+                                }
+                            }
+                            
+                            Button(action: {
+                                deleteProduct(product)
+                            }) {
+                                Image(systemName: "trash")
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(BorderlessButtonStyle())
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
-                .onDelete(perform: deleteProduct)
             }
             
             Spacer()
@@ -338,14 +362,28 @@ struct CartView: View {
             .padding(.bottom, 20)
         }
         .navigationTitle("Your Cart")
+        .onAppear {
+            initializeQuantities()
+        }
+    }
+    
+    private func initializeQuantities() {
+        for product in cart {
+            if quantities[product.id] == nil {
+                quantities[product.id] = 1
+            }
+        }
     }
     
     func totalPrice() -> Double {
-        return cart.reduce(0) { $0 + $1.price }
+        cart.reduce(0) { $0 + ($1.price * Double(quantities[$1.id] ?? 1)) }
     }
     
-    func deleteProduct(at offsets: IndexSet) {
-        cart.remove(atOffsets: offsets)
+    func deleteProduct(_ product: Product) {
+        if let index = cart.firstIndex(where: { $0.id == product.id }) {
+            quantities[product.id] = nil
+            cart.remove(at: index)
+        }
     }
 }
 
