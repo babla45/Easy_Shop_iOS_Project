@@ -16,6 +16,9 @@ struct LoginPage: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var errorMessage: String = ""
+    @State private var showSuccessMessage: Bool = false
+    @State private var navigateToProductGrid: Bool = false
+    @State private var navigateToAdminPage: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -49,9 +52,24 @@ struct LoginPage: View {
                         .foregroundColor(.red)
                 }
 
+                if showSuccessMessage {
+                    Text("Login successful!")
+                        .foregroundColor(.green)
+                }
+
                 Spacer()
             }
             .padding()
+            .background(
+                Group {
+                    NavigationLink(destination: ProductGridView().navigationBarBackButtonHidden(true), isActive: $navigateToProductGrid) {
+                        EmptyView()
+                    }
+                    NavigationLink(destination: AdminPage().navigationBarBackButtonHidden(true), isActive: $navigateToAdminPage) {
+                        EmptyView()
+                    }
+                }
+            )
         }
     }
 
@@ -63,7 +81,15 @@ struct LoginPage: View {
                 // Successful login
                 errorMessage = ""
                 loggedInUserEmail = user.email
+                showSuccessMessage = true
                 print("User logged in successfully: \(user.email ?? "No Email")")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    if user.email == "admin@gmail.com" {
+                        navigateToAdminPage = true
+                    } else {
+                        navigateToProductGrid = true
+                    }
+                }
             }
         }
     }
@@ -76,6 +102,8 @@ struct SignupPage: View {
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
     @State private var errorMessage: String = ""
+    @State private var showSuccessMessage: Bool = false
+    @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
         VStack(spacing: 20) {
@@ -112,6 +140,11 @@ struct SignupPage: View {
                     .foregroundColor(.red)
             }
 
+            if showSuccessMessage {
+                Text("Signup successful! Please log in.")
+                    .foregroundColor(.green)
+            }
+
             Spacer()
         }
         .padding()
@@ -127,9 +160,12 @@ struct SignupPage: View {
             if let error = error {
                 errorMessage = error.localizedDescription
             } else {
-                errorMessage = "User signed up successfully.\nPlease go back and log in."
+                errorMessage = ""
+                showSuccessMessage = true
                 print("User signed up successfully")
-                    
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.presentationMode.wrappedValue.dismiss()
+                }
             }
         }
     }
