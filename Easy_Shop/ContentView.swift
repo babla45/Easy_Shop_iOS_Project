@@ -170,8 +170,11 @@ struct ProductGridView: View {
                             VStack {
                                 if let url = URL(string: product.image) {
                                     AsyncImage(url: url) { image in
-                                        image.frame(width:145, height: 100)
-                                             .cornerRadius(10.0)
+                                        image
+                                            .resizable() // Ensure the image is resizable
+                                            .scaledToFit() // Scale the image to fit within the frame
+                                            .frame(width: 145, height: 100)
+                                            .cornerRadius(10.0)
                                     } placeholder: {
                                         ProgressView()
                                     }
@@ -274,7 +277,10 @@ struct ProductDetailView: View {
             VStack {
                 if let url = URL(string: product.image) {
                     AsyncImage(url: url) { image in
-                        image.frame(width:365, height: 257)
+                        image
+                            .resizable() // Ensure the image is resizable
+                            .scaledToFit() // Scale the image to fit within the frame
+                            .frame(width: 365, height: 257)
                             .cornerRadius(15)
                     } placeholder: {
                         ProgressView()
@@ -351,6 +357,21 @@ struct CartView: View {
                             .font(.headline)
                         
                         HStack {
+                            if let url = URL(string: product.image) {
+                                AsyncImage(url: url) { image in
+                                    image
+                                        .resizable() // Ensure the image is resizable
+                                        .scaledToFit() // Scale the image to fit within the frame
+                                        .frame(width: 50, height: 50)
+                                        .cornerRadius(5.0)
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                            } else {
+                                Rectangle()
+                                    .fill(Color.gray)
+                                    .frame(width: 50, height: 50)
+                            }
                             Stepper(
                                 value: Binding(
                                     get: { quantities[product.id] ?? 1 },
