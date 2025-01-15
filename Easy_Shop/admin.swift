@@ -18,7 +18,7 @@ struct ContentView_Preview: PreviewProvider {
     }
 }
 
-struct AdminPage: View {
+struct AdminPage: View, ImagePickerDelegate {
     @State private var products: [Product] = []
     @State private var newProduct = Product(id: UUID().uuidString, name: "", description: "", price: 0, image: "")
     @State private var isEditing = false
@@ -28,9 +28,17 @@ struct AdminPage: View {
     @State private var showImagePicker = false
     @State private var orders: [Order] = []
     @Binding var loggedInUserEmail: String?
+    
+    // Required for ImagePickerDelegate
+    private let delegateHelper = DelegateHelper()
 
     let db = Firestore.firestore()
     let storage = Storage.storage()
+
+    // Add this initializer
+    init(loggedInUserEmail: Binding<String?>) {
+        self._loggedInUserEmail = loggedInUserEmail
+    }
 
     var body: some View {
         NavigationView {
@@ -182,12 +190,19 @@ struct AdminPage: View {
 
             }
             .sheet(isPresented: $showImagePicker) {
-                ImagePicker(data: $selectedImageData)
+                ImagePicker(data: $selectedImageData, delegate: delegateHelper)
             }
             .onAppear {
+                delegateHelper.parent = self  // Set the delegate when view appears
                 loadProducts()
                 loadOrders()
             }
+        }
+    }
+
+    func didSelectImage(_ image: UIImage) {
+        if let imageData = image.jpegData(compressionQuality: 0.8) {
+            self.selectedImageData = imageData
         }
     }
 
@@ -435,9 +450,20 @@ struct AdminPage: View {
     }
 }
 
+// Change the protocol definition to not require a class type
+protocol ImagePickerDelegate {
+    func didSelectImage(_ image: UIImage)
+}
+
+// Update DelegateHelper to use the protocol without AnyObject
+class DelegateHelper: NSObject {
+    var parent: ImagePickerDelegate?
+}
+
 // Image Picker for selecting images from the device
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var data: Data?
+    let delegate: DelegateHelper?  // Change to let since we won't modify it
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
@@ -468,6 +494,7 @@ struct ImagePicker: UIViewControllerRepresentable {
                 if let uiImage = image as? UIImage, let data = uiImage.jpegData(compressionQuality: 0.8) {
                     DispatchQueue.main.async {
                         self.parent.data = data
+                        self.parent.delegate?.parent?.didSelectImage(uiImage)
                     }
                 }
             }

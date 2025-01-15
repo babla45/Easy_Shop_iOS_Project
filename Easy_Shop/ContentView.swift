@@ -153,14 +153,18 @@ struct ProductGridView: View {
             }
 
             if showFlashMessage {
-                Text("Product added to cart!")
-                    .foregroundColor(.green)
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(10)
-                    .shadow(radius: 10)
-                    .transition(.slide)
-                    .animation(.easeInOut)
+                VStack {
+                    Spacer()
+                    Text("Product added to cart!")
+                        .foregroundColor(.green)
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(radius: 10)
+                        .transition(.slide)
+                        .animation(.easeInOut)
+                    Spacer()
+                }
             }
 
             ScrollView {
@@ -325,14 +329,18 @@ struct ProductDetailView: View {
                 }
 
                 if showFlashMessage {
-                    Text("Product added to cart!")
-                        .foregroundColor(.green)
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(10)
-                        .shadow(radius: 10)
-                        .transition(.slide)
-                        .animation(.easeInOut)
+                    VStack {
+                        Spacer()
+                        Text("Product added to cart!")
+                            .foregroundColor(.green)
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(10)
+                            .shadow(radius: 10)
+                            .transition(.slide)
+                            .animation(.easeInOut)
+                        Spacer()
+                    }
                 }
             }
             .navigationTitle("Product Details")
