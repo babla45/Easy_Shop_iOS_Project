@@ -93,7 +93,7 @@ struct LoginPage: View {
             }
         }
     }
-}
+} 
 
 
 // Sign up page view

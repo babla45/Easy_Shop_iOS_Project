@@ -118,7 +118,7 @@ struct ProductGridView: View {
     @State private var isLoggedOut = false
     @State private var showFlashMessage = false
     @State private var navigateToUserOrders = false
-    @State private var navigateToNews = false // State for navigating to news
+    @State private var navigateToCurrencyRates = false // State for navigating to currency rates
 
     var body: some View {
         VStack {
@@ -141,17 +141,16 @@ struct ProductGridView: View {
             }
             .padding(.horizontal)
 
-            NavigationLink(destination: NewsView(), isActive: $navigateToNews) {
-                Text("        View Top News")
+            NavigationLink(destination: CurrencyRatesView(), isActive: $navigateToCurrencyRates) {
+                Text("        View Currency Rates on Today")
                     .font(.subheadline)
                     .foregroundColor(.blue)
                     .padding(.bottom, 10)
                     .frame(maxWidth: .infinity, alignment: .leading)  // Align to the left
                     .onTapGesture {
-                        navigateToNews = true
+                        navigateToCurrencyRates = true
                     }
             }
-
 
             if showFlashMessage {
                 Text("Product added to cart!")
@@ -615,61 +614,53 @@ struct UserOrdersView: View {
     }
 }
 
-// News View to display top news
-struct NewsView: View {
-    @State private var articles: [Article] = []
+// Currency Rates View to display exchange rates
+struct CurrencyRatesView: View {
+    @State private var conversionRates: [String: Double] = [:]
 
     var body: some View {
         VStack {
-            Text("Top News")
+            Text("Currency Rates")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.orange)
                 .padding()
 
-            List(articles) { article in
+            List(conversionRates.sorted(by: >), id: \.key) { key, value in
                 VStack(alignment: .leading) {
-                    Text(article.title)
+                    Text("\(key): \(value, specifier: "%.4f")")
                         .font(.headline)
-                    Text(article.description ?? "")
-                        .font(.subheadline)
                 }
                 .padding()
             }
         }
         .onAppear {
-            fetchNews()
+            fetchCurrencyRates()
         }
     }
 
-    func fetchNews() {
-        let apiKey = "9ce4922f100146e38f8b2650c8361aaa"
-        let urlString = "https://newsapi.org/v2/top-headlines?country=us&apiKey=\(apiKey)"
+    func fetchCurrencyRates() {
+        let apiKey = "2d01062e9692eed1a3fbc009"
+        let urlString = "https://v6.exchangerate-api.com/v6/\(apiKey)/latest/USD"
         guard let url = URL(string: urlString) else { return }
 
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let data = data {
                 do {
-                    let newsResponse = try JSONDecoder().decode(NewsResponse.self, from: data)
+                    let currencyResponse = try JSONDecoder().decode(CurrencyResponse.self, from: data)
                     DispatchQueue.main.async {
-                        self.articles = newsResponse.articles
+                        self.conversionRates = currencyResponse.conversion_rates
                     }
                 } catch {
-                    print("Error decoding news data: \(error)")
+                    print("Error decoding currency data: \(error)")
                 }
             }
         }.resume()
     }
 }
 
-// Models for News API response
-struct NewsResponse: Codable {
-    let articles: [Article]
-}
-
-struct Article: Codable, Identifiable {
-    let id = UUID()
-    let title: String
-    let description: String?
+// Models for Currency API response
+struct CurrencyResponse: Codable {
+    let conversion_rates: [String: Double]
 }
 
