@@ -42,161 +42,62 @@ struct AdminPage: View, ImagePickerDelegate {
 
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 20) {
                 Text("Admin Panel")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .padding(.horizontal, 10.0)
-                    .background(Color.green)
-                    .cornerRadius(10)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]),
+                                     startPoint: .leading,
+                                     endPoint: .trailing)
+                    )
+                    .foregroundColor(.white)
+                    .cornerRadius(15)
+                    .shadow(radius: 5)
+                    .padding(.top)
 
-                // Form to Add/Edit Product
-                Form {
-                    TextField("Product Name", text: $newProduct.name)
-                    TextField("Description", text: $newProduct.description)
-                    TextField("Price", value: $newProduct.price, format: .number)
-                        .keyboardType(.decimalPad)
-                    
-                    Button(action: {
-                        showImagePicker = true
-                    }) {
-                        Text(selectedImageData == nil ? "Select Image" : "Change Image")
-                            .font(.title3)
-                            .foregroundColor(.blue)
-                            .padding(.vertical, 10)
-                    }
-                    
-                    if let imageData = selectedImageData, let uiImage = UIImage(data: imageData) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 200)
-                            .cornerRadius(10)
+                // Navigation Buttons
+                VStack(spacing: 15) {
+                    NavigationLink(destination: AddProductView(products: $products, errorMessage: $errorMessage, db: db, storage: storage)) {
+                        AdminMenuButton(title: "Add New Product", icon: "plus.circle.fill", color: .green)
                     }
 
-                    Button(action: {
-                        if isEditing {
-                            updateProduct()
-                        } else {
-                            addProduct()
-                        }
-                    }) {
-                        Text(isEditing ? "Update Product" : "Add Product")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 13.0)
-                            .background(isEditing ? Color.orange : Color.green)
-                            .cornerRadius(10)
+                    NavigationLink(destination: ViewProductsView(products: products, editProduct: editProduct, deleteProduct: deleteProduct)) {
+                        AdminMenuButton(title: "View Products", icon: "list.bullet", color: .blue)
                     }
-                    .disabled(newProduct.name.isEmpty || newProduct.price <= 0 || selectedImageData == nil)
-                }
 
-                if !errorMessage.isEmpty {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding()
-                }
-
-                // Product List with Edit/Delete Buttons
-                List {
-                    ForEach(products) { product in
-                        HStack {
-                            Text(product.name + "\nPrice: \(String(product.price)) $")
-                                .padding(.horizontal, 35.0)
-                                .background(Color.pink.opacity(0.1))
-                                .cornerRadius(5.0)
-
-                            Spacer()
-                            Button(action: {
-                                editProduct(product)
-                            }) {
-                                Text("Edit")
-                                    .padding(8)
-                                    .background(Color.blue.opacity(0.1))
-                                    .cornerRadius(8)
-                            }
-                            .buttonStyle(BorderlessButtonStyle())
-                            
-                            Button(action: {
-                                deleteProduct(product)
-                            }) {
-                                Text("Delete")
-                                    .padding(8)
-                                    .background(Color.red.opacity(0.1))
-                                    .cornerRadius(8)
-                            }
-                            .buttonStyle(BorderlessButtonStyle())
-                        }
-                        .padding(.vertical, 5)
+                    NavigationLink(destination: ViewOrdersView(orders: orders, deleteOrder: deleteOrder)) {
+                        AdminMenuButton(title: "View Orders", icon: "cart.fill", color: .orange)
                     }
                 }
-
-                // Orders List
-                List {
-                    ForEach(orders) { order in
-                        VStack(alignment: .leading) {
-                            Text("Order ID: \(order.id)")
-                            Text("Name: \(order.name)") // Add name display
-                            Text("Mobile: \(order.mobileNumber)")
-                            Text("Address: \(order.address)")
-                            Text("Email: \(order.email)")
-                            Text("Payment Method: \(order.paymentMethod)") // Add payment method
-                            ForEach(order.products) { product in
-                                Text("\(product.name): $\(product.price, specifier: "%.2f") x \(product.quantity)")
-                            }
-                            Text("Total: $\(order.totalPrice, specifier: "%.2f")")
-                                .fontWeight(.bold)
-                            Button(action: {
-                                deleteOrder(order)
-                            }) {
-                                Text("Delete Order")
-                                    .foregroundColor(.red)
-                            }
-                            .buttonStyle(BorderlessButtonStyle()) // Ensure button style is borderless
-                        }
-                        .padding()
-                        .contentShape(Rectangle()) // Make the entire VStack tappable
-                    }
+                .padding()
+                .onAppear {
+                    loadProducts()
+                    loadOrders()
                 }
 
-                // Logout and Products Button
+                Spacer()
+
+                // Logout and Store View buttons
                 HStack {
-                    Button(action: logout) {
-                        Text("Logout")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 13.0)
-                            .background(Color.purple)
-                            .cornerRadius(10)
-                    }
-                    .padding()
-                    
                     NavigationLink(destination: ProductGridView(loggedInUserEmail: $loggedInUserEmail).navigationBarBackButtonHidden(false)) {
-                        Text("Products")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 13.0)
-                            .background(Color.blue)
-                            .cornerRadius(10)
+                        AdminMenuButton(title: "Store", icon: "bag", color: .blue)
                     }
-                    .padding()
+                    
+                    Button(action: logout) {
+                        AdminMenuButton(title: "Logout", icon: "arrow.right.square", color: .red)
+                    }
                 }
-
-                NavigationLink(destination: bablaView()
-                    .navigationBarBackButtonHidden(true),
-                               isActive: $isLoggedOut) {
-                    EmptyView()
-                }.hidden()
-
+                .padding(.bottom)
             }
-            .sheet(isPresented: $showImagePicker) {
-                ImagePicker(data: $selectedImageData, delegate: delegateHelper)
-            }
-            .onAppear {
-                delegateHelper.parent = self  // Set the delegate when view appears
-                loadProducts()
-                loadOrders()
-            }
+            .background(
+                LinearGradient(gradient: Gradient(colors: [Color(.systemGray6), Color.white]),
+                             startPoint: .top,
+                             endPoint: .bottom)
+                    .ignoresSafeArea()
+            )
         }
     }
 
@@ -207,7 +108,6 @@ struct AdminPage: View, ImagePickerDelegate {
     }
 
     // Functions
-
     func addProduct() {
         guard let imageData = selectedImageData else {
             errorMessage = "Please select an image."
@@ -512,4 +412,394 @@ struct Order: Identifiable {
     var paymentMethod: String // Add payment method
     var products: [Product]
     var totalPrice: Double
+}
+
+// Add these supporting views
+struct ProductListView: View {
+    let products: [Product]
+    let editProduct: (Product) -> Void
+    let deleteProduct: (Product) -> Void
+    
+    var body: some View {
+        List {
+            ForEach(products) { product in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(product.name)
+                        .font(.headline)
+                    Text("Price: $\(String(format: "%.2f", product.price))")
+                        .foregroundColor(.green)
+                    
+                    HStack {
+                        Spacer()
+                        Button(action: { editProduct(product) }) {
+                            Text("Edit")
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.blue.opacity(0.2))
+                                .cornerRadius(8)
+                        }
+                        
+                        Button(action: { deleteProduct(product) }) {
+                            Text("Delete")
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.red.opacity(0.2))
+                                .cornerRadius(8)
+                        }
+                    }
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(10)
+                .shadow(radius: 2)
+            }
+        }
+    }
+}
+
+struct OrderListView: View {
+    let orders: [Order]
+    let deleteOrder: (Order) -> Void
+    
+    var body: some View {
+        List {
+            ForEach(orders) { order in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Order #\(order.id)")
+                        .font(.headline)
+                        .foregroundColor(.purple)
+                    Group {
+                        Text("Customer: \(order.name)")
+                        Text("Contact: \(order.mobileNumber)")
+                        Text("Address: \(order.address)")
+                        Text("Payment: \(order.paymentMethod)")
+                    }
+                    .font(.subheadline)
+                    
+                    Divider()
+                    
+                    ForEach(order.products) { product in
+                        HStack {
+                            Text(product.name)
+                            Spacer()
+                            Text("$\(product.price, specifier: "%.2f") x \(product.quantity)")
+                        }
+                    }
+                    
+                    Text("Total: $\(order.totalPrice, specifier: "%.2f")")
+                        .font(.headline)
+                        .foregroundColor(.green)
+                        .padding(.top, 5)
+                    
+                    Button(action: { deleteOrder(order) }) {
+                        Text("Delete Order")
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.red)
+                            .cornerRadius(8)
+                    }
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(10)
+                .shadow(radius: 2)
+            }
+        }
+    }
+}
+
+// Helper Views
+struct AdminMenuButton: View {
+    let title: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+            Text(title)
+        }
+        .font(.headline)
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(color.gradient)
+        .cornerRadius(10)
+        .shadow(radius: 3)
+    }
+}
+
+// Add Product View
+struct AddProductView: View, ImagePickerDelegate {
+    @Binding var products: [Product]
+    @Binding var errorMessage: String
+    let db: Firestore
+    let storage: Storage
+    
+    @State private var newProduct = Product(id: UUID().uuidString, name: "", description: "", price: 0, image: "")
+    @State private var selectedImageData: Data? = nil
+    @State private var showImagePicker = false
+    private let delegateHelper = DelegateHelper()
+    
+    var body: some View {
+        Form {
+            Section(header: Text("Product Details").foregroundColor(.purple)) {
+                TextField("Product Name", text: $newProduct.name)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                TextField("Description", text: $newProduct.description)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                TextField("Price", value: $newProduct.price, format: .number)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                
+                Button(action: { showImagePicker = true }) {
+                    HStack {
+                        Image(systemName: "photo")
+                        Text(selectedImageData == nil ? "Select Image" : "Change Image")
+                    }
+                    .foregroundColor(.blue)
+                }
+                
+                if let imageData = selectedImageData, let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 200)
+                        .cornerRadius(10)
+                }
+                
+                Button(action: addProduct) {
+                    Text("Add Product")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.green.gradient)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+                .disabled(newProduct.name.isEmpty || newProduct.price <= 0 || selectedImageData == nil)
+            }
+        }
+        .navigationTitle("Add Product")
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(data: $selectedImageData, delegate: delegateHelper)
+        }
+    }
+    
+    func didSelectImage(_ image: UIImage) {
+        if let imageData = image.jpegData(compressionQuality: 0.8) {
+            self.selectedImageData = imageData
+        }
+    }
+    
+    func addProduct() {
+        guard let imageData = selectedImageData else {
+            errorMessage = "Please select an image."
+            return
+        }
+
+        let storageRef = storage.reference().child("iOS_project/\(UUID().uuidString).jpg")
+        storageRef.putData(imageData, metadata: nil) { metadata, error in
+            if let error = error {
+                errorMessage = "Image upload failed: \(error.localizedDescription)"
+                return
+            }
+
+            storageRef.downloadURL { url, error in
+                if let error = error {
+                    errorMessage = "Failed to get image URL: \(error.localizedDescription)"
+                    return
+                }
+
+                guard let imageUrl = url?.absoluteString else { return }
+                newProduct.image = imageUrl
+                saveProductData()
+            }
+        }
+    }
+
+    func saveProductData() {
+        let productData: [String: Any] = [
+            "id": newProduct.id,
+            "name": newProduct.name,
+            "description": newProduct.description,
+            "price": newProduct.price,
+            "image": newProduct.image
+        ]
+
+        db.collection("products").document(newProduct.id).setData(productData) { error in
+            if let error = error {
+                errorMessage = "Error adding product: \(error.localizedDescription)"
+            } else {
+                errorMessage = "Product added successfully!"
+                newProduct = Product(id: UUID().uuidString, name: "", description: "", price: 0, image: "")
+                selectedImageData = nil
+            }
+        }
+    }
+}
+
+// View Products View
+struct ViewProductsView: View {
+    let products: [Product]
+    let editProduct: (Product) -> Void
+    let deleteProduct: (Product) -> Void
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 15) {
+                if products.isEmpty {
+                    Text("No products available")
+                        .foregroundColor(.gray)
+                        .padding()
+                } else {
+                    ForEach(products) { product in
+                        ProductCardView(product: product, editProduct: editProduct, deleteProduct: deleteProduct)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Products")
+    }
+}
+
+struct ProductCardView: View {
+    let product: Product
+    let editProduct: (Product) -> Void
+    let deleteProduct: (Product) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AsyncImage(url: URL(string: product.image)) { image in
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 150)
+                    .cornerRadius(10)
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 150)
+                    .cornerRadius(10)
+            }
+            
+            Text(product.name)
+                .font(.headline)
+            
+            Text(product.description)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            Text("Price: $\(product.price, specifier: "%.2f")")
+                .font(.title3)
+                .foregroundColor(.green)
+            
+            HStack {
+                Spacer()
+                Button("Edit") {
+                    editProduct(product)
+                }
+                .buttonStyle(.bordered)
+                .tint(.blue)
+                
+                Button("Delete") {
+                    deleteProduct(product)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+}
+
+struct ViewOrdersView: View {
+    let orders: [Order]
+    let deleteOrder: (Order) -> Void
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 15) {
+                if orders.isEmpty {
+                    Text("No orders available")
+                        .foregroundColor(.gray)
+                        .padding()
+                } else {
+                    ForEach(orders) { order in
+                        OrderCardView(order: order, deleteOrder: deleteOrder)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Orders")
+    }
+}
+
+struct OrderCardView: View {
+    let order: Order
+    let deleteOrder: (Order) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Order #\(order.id)")
+                .font(.headline)
+                .foregroundColor(.purple)
+            
+            Group {
+                Text("Customer: \(order.name)")
+                Text("Contact: \(order.mobileNumber)")
+                Text("Address: \(order.address)")
+                Text("Email: \(order.email)")
+                Text("Payment: \(order.paymentMethod)")
+            }
+            .font(.subheadline)
+            
+            Divider()
+            
+            Text("Products:")
+                .font(.headline)
+            
+            ForEach(order.products) { product in
+                HStack {
+                    Text(product.name)
+                    Spacer()
+                    Text("$\(product.price, specifier: "%.2f") × \(product.quantity)")
+                }
+                .font(.subheadline)
+            }
+            
+            Divider()
+            
+            HStack {
+                Text("Total:")
+                    .font(.headline)
+                Spacer()
+                Text("$\(order.totalPrice, specifier: "%.2f")")
+                    .font(.title3)
+                    .foregroundColor(.green)
+            }
+            
+            Button(action: { deleteOrder(order) }) {
+                HStack {
+                    Spacer()
+                    Image(systemName: "trash")
+                    Text("Delete Order")
+                    Spacer()
+                }
+                .foregroundColor(.white)
+                .padding()
+                .background(Color.red)
+                .cornerRadius(10)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
 }
