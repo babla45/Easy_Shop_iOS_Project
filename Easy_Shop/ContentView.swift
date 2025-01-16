@@ -7,6 +7,8 @@ import FirebaseStorage
 // Main entry point
 @main
 struct FirebaseLab3App: App {
+//    @State private var adminEmail: String? = "admin@gmail.com"
+    
     init() {
         // Initialize Firebase
         FirebaseApp.configure()
@@ -15,6 +17,7 @@ struct FirebaseLab3App: App {
     var body: some Scene {
         WindowGroup {
             bablaView()
+//            AdminPage(loggedInUserEmail: $adminEmail)
         }
     }
 }
@@ -141,7 +144,7 @@ struct ProductGridView: View {
             }
             .padding(.horizontal)
 
-            NavigationLink(destination: CurrencyRatesView(), isActive: $navigateToCurrencyRates) {
+            NavigationLink(destination: CurrencyRatesView(cart: $cart), isActive: $navigateToCurrencyRates) {
                 Text("        View Currency Rates on Today")
                     .font(.subheadline)
                     .foregroundColor(.blue)
@@ -646,6 +649,9 @@ struct UserOrdersView: View {
 // Currency Rates View to display exchange rates
 struct CurrencyRatesView: View {
     @State private var conversionRates: [String: Double] = [:]
+    @State private var selectedCurrency: (String, Double)? = nil // State for selected currency
+    @State private var navigateToCurrencyDetail = false // State for navigation
+    @Binding var cart: [Product] // Add this line
 
     var body: some View {
         VStack {
@@ -661,11 +667,20 @@ struct CurrencyRatesView: View {
                         .font(.headline)
                 }
                 .padding()
+                .onTapGesture {
+                    selectedCurrency = (key, value)
+                    navigateToCurrencyDetail = true
+                }
             }
         }
         .onAppear {
             fetchCurrencyRates()
         }
+        .background(
+            NavigationLink(destination: CurrencyDetailView(currency: selectedCurrency, cart: $cart), isActive: $navigateToCurrencyDetail) {
+                EmptyView()
+            }
+        )
     }
 
     func fetchCurrencyRates() {
@@ -685,6 +700,124 @@ struct CurrencyRatesView: View {
                 }
             }
         }.resume()
+    }
+}
+
+// New view to show currency conversion details
+struct CurrencyDetailView: View {
+    var currency: (String, Double)?
+    @Binding var cart: [Product]
+    @State private var quantities: [String: Int] = [:]
+    
+    private var totalUSDPrice: Double {
+        cart.reduce(0) { $0 + ($1.price * Double(quantities[$1.id] ?? 1)) }
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                if let currency = currency {
+                    // Currency Header
+                    VStack {
+                        Text(currency.0)
+                            .font(.system(size: 40, weight: .bold))
+                            .foregroundColor(.primary)
+                        Text("Currency Details")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical)
+                    
+                    // Conversion Rate Card
+                    VStack(spacing: 15) {
+                        HStack {
+                            Image(systemName: "arrow.left.arrow.right.circle.fill")
+                                .font(.title)
+                                .foregroundColor(.blue)
+                            Text("Exchange Rate")
+                                .font(.headline)
+                        }
+                        
+                        Text("1 USD = \(currency.1, specifier: "%.4f") \(currency.0)")
+                            .font(.title2)
+                            .foregroundColor(.green)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color(.systemGray6))
+                    )
+                    .padding(.horizontal)
+                    
+                    // Cart Total Conversion Card
+                    VStack(spacing: 15) {
+                        HStack {
+                            Image(systemName: "cart.fill")
+                                .font(.title)
+                                .foregroundColor(.orange)
+                            Text("Cart Total")
+                                .font(.headline)
+                        }
+                        
+                        Divider()
+                        
+                        VStack(spacing: 10) {
+                            HStack {
+                                Text("USD Total:")
+                                Spacer()
+                                Text("$\(totalUSDPrice, specifier: "%.2f")")
+                                    .foregroundColor(.blue)
+                                    .font(.headline)
+                            }
+                            
+                            HStack {
+                                Text("\(currency.0) Total:")
+                                Spacer()
+                                Text("\(totalUSDPrice * currency.1, specifier: "%.2f") \(currency.0)")
+                                    .foregroundColor(.green)
+                                    .font(.headline)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color(.systemGray6))
+                    )
+                    .padding(.horizontal)
+                    
+                    // Additional Info
+                    if cart.isEmpty {
+                        Text("Your cart is empty")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                            .padding()
+                    } else {
+                        Text("Cart Items: \(cart.count)")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                            .padding()
+                    }
+                } else {
+                    Text("No currency selected")
+                        .font(.title)
+                        .foregroundColor(.secondary)
+                        .padding()
+                }
+            }
+        }
+        .navigationTitle("Currency Details")
+        .onAppear {
+            initializeQuantities()
+        }
+    }
+    
+    private func initializeQuantities() {
+        for product in cart {
+            if quantities[product.id] == nil {
+                quantities[product.id] = 1
+            }
+        }
     }
 }
 
