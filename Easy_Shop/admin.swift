@@ -28,6 +28,7 @@ struct AdminPage: View, ImagePickerDelegate {
     @State private var showImagePicker = false
     @State private var orders: [Order] = []
     @Binding var loggedInUserEmail: String?
+    @State private var navigateToLogin = false // Add this line
     
     // Required for ImagePickerDelegate
     private let delegateHelper = DelegateHelper()
@@ -39,6 +40,8 @@ struct AdminPage: View, ImagePickerDelegate {
     init(loggedInUserEmail: Binding<String?>) {
         self._loggedInUserEmail = loggedInUserEmail
     }
+
+    @Environment(\.presentationMode) var presentationMode // Add this line
 
     var body: some View {
         NavigationView {
@@ -93,10 +96,9 @@ struct AdminPage: View, ImagePickerDelegate {
                 .padding(.bottom)
             }
             .background(
-                LinearGradient(gradient: Gradient(colors: [Color(.systemGray6), Color.white]),
-                             startPoint: .top,
-                             endPoint: .bottom)
-                    .ignoresSafeArea()
+                NavigationLink("", destination: bablaView()
+                    .navigationBarBackButtonHidden(true), 
+                    isActive: $navigateToLogin)
             )
         }
     }
@@ -336,7 +338,7 @@ struct AdminPage: View, ImagePickerDelegate {
         do {
             try Auth.auth().signOut()
             loggedInUserEmail = nil
-            isLoggedOut = true
+            navigateToLogin = true // Update this line
         } catch {
             errorMessage = "Error logging out: \(error.localizedDescription)"
         }
