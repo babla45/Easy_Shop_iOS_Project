@@ -121,7 +121,6 @@ struct ProductGridView: View {
     @State private var isLoggedOut = false
     @State private var showFlashMessage = false
     @State private var navigateToUserOrders = false
-    @State private var navigateToCurrencyRates = false // State for navigating to currency rates
 
     var body: some View {
         VStack {
@@ -143,17 +142,6 @@ struct ProductGridView: View {
                 .padding()
             }
             .padding(.horizontal)
-
-            NavigationLink(destination: CurrencyRatesView(cart: $cart), isActive: $navigateToCurrencyRates) {
-                Text("        View Currency Rates on Today")
-                    .font(.subheadline)
-                    .foregroundColor(.blue)
-                    .padding(.bottom, 10)
-                    .frame(maxWidth: .infinity, alignment: .leading)  // Align to the left
-                    .onTapGesture {
-                        navigateToCurrencyRates = true
-                    }
-            }
 
             if showFlashMessage {
                 VStack {
@@ -358,6 +346,7 @@ struct CartView: View {
     @State private var quantities: [String: Int] = [:]
     @State private var navigateToCheckout = false
     @Binding var loggedInUserEmail: String?
+    @State private var navigateToCurrencyRates = false // Add this line
 
     var body: some View {
         VStack {
@@ -410,7 +399,23 @@ struct CartView: View {
                 }
             }
             
-            Spacer()
+            // Add this button before the total price
+            Button(action: {
+                navigateToCurrencyRates = true
+            }) {
+                HStack {
+                    Image(systemName: "dollarsign.circle.fill")
+                    Text("View Price in Other Currencies")
+                }
+                .font(.headline)
+                .foregroundColor(.blue)
+                .padding(.vertical, 10)
+            }
+            .background(
+                NavigationLink(destination: CurrencyRatesView(cart: $cart), isActive: $navigateToCurrencyRates) {
+                    EmptyView()
+                }
+            )
             
             Text("Total: $\(totalPrice(), specifier: "%.2f")")
                 .font(.title)

@@ -221,25 +221,18 @@ struct AdminPage: View, ImagePickerDelegate {
     }
 
     func editProduct(_ product: Product) {
-        // Assign the selected product to `newProduct` for editing
-        newProduct = Product(
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            image: product.image
-        )
-        isEditing = true
-        errorMessage = "" // Clear any previous error messages
-
-        // Load the existing image into selectedImageData for preview
-        if !product.image.isEmpty, let url = URL(string: product.image) {
-            DispatchQueue.global().async {
-                if let data = try? Data(contentsOf: url) {
-                    DispatchQueue.main.async {
-                        selectedImageData = data
-                    }
-                }
+        let productData: [String: Any] = [
+            "name": product.name,
+            "description": product.description,
+            "price": product.price
+        ]
+        
+        db.collection("products").document(product.id).updateData(productData) { error in
+            if let error = error {
+                errorMessage = "Error updating product: \(error.localizedDescription)"
+            } else {
+                errorMessage = "Product updated successfully!"
+                loadProducts()
             }
         }
     }
@@ -639,11 +632,16 @@ struct AddProductView: View, ImagePickerDelegate {
     }
 }
 
-// View Products View
+// Update ViewProductsView to handle edit navigation
 struct ViewProductsView: View {
     let products: [Product]
     let editProduct: (Product) -> Void
     let deleteProduct: (Product) -> Void
+    @State private var selectedProduct: Product? = nil
+    @State private var showingEditSheet = false
+    @State private var editedName = ""
+    @State private var editedDescription = ""
+    @State private var editedPrice = 0.0
     
     var body: some View {
         ScrollView {
@@ -654,16 +652,141 @@ struct ViewProductsView: View {
                         .padding()
                 } else {
                     ForEach(products) { product in
-                        ProductCardView(product: product, editProduct: editProduct, deleteProduct: deleteProduct)
+                        ProductCardView(
+                            product: product,
+                            editProduct: { product in
+                                selectedProduct = product
+                                editedName = product.name
+                                editedDescription = product.description
+                                editedPrice = product.price
+                                showingEditSheet = true
+                            },
+                            deleteProduct: deleteProduct
+                        )
                     }
                 }
             }
             .padding()
         }
         .navigationTitle("Products")
+        .sheet(isPresented: $showingEditSheet) {
+            NavigationView {
+                Form {
+                    Section(header: Text("Edit Product Details")) {
+                        VStack(alignment: .leading) {
+                            Text("Product Name")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            TextField("Enter product name", text: $editedName)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        
+                        VStack(alignment: .leading) {
+                            Text("Description")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            TextField("Enter product description", text: $editedDescription)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        
+                        VStack(alignment: .leading) {
+                            Text("Price")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            TextField("Enter price", value: $editedPrice, format: .number)
+                                .keyboardType(.decimalPad)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                    }
+                }
+                .navigationTitle("Edit Product")
+                .navigationBarItems(
+                    leading: Button("Cancel") {
+                        showingEditSheet = false
+                    },
+                    trailing: Button("Save") {
+                        if let product = selectedProduct {
+                            let updatedProduct = Product(
+                                id: product.id,
+                                name: editedName,
+                                description: editedDescription,
+                                price: editedPrice,
+                                image: product.image
+                            )
+                            editProduct(updatedProduct)
+                            showingEditSheet = false
+                        }
+                    }
+                    .disabled(editedName.isEmpty || editedDescription.isEmpty || editedPrice <= 0)
+                )
+            }
+        }
     }
 }
 
+// Add EditProductView
+struct EditProductView: View {
+    let product: Product
+    let onSave: (Product) -> Void
+    
+    @Environment(\.presentationMode) var presentationMode
+    @State private var editedName: String
+    @State private var editedDescription: String
+    @State private var editedPrice: String
+    @State private var showAlert = false
+    
+    init(product: Product, onSave: @escaping (Product) -> Void) {
+        self.product = product
+        self.onSave = onSave
+        _editedName = State(initialValue: product.name)
+        _editedDescription = State(initialValue: product.description)
+        _editedPrice = State(initialValue: String(format: "%.2f", product.price))
+    }
+    
+    var body: some View {
+        Form {
+            Section(header: Text("Edit Product Details")) {
+                TextField("Name", text: $editedName)
+                TextField("Description", text: $editedDescription)
+                TextField("Price", text: $editedPrice)
+                    .keyboardType(.decimalPad)
+            }
+            
+            Section {
+                Button("Save Changes") {
+                    if let price = Double(editedPrice) {
+                        let updatedProduct = Product(
+                            id: product.id,
+                            name: editedName,
+                            description: editedDescription,
+                            price: price,
+                            image: product.image
+                        )
+                        onSave(updatedProduct)
+                    }
+                }
+                .disabled(editedName.isEmpty || editedDescription.isEmpty || editedPrice.isEmpty)
+                
+                Button("Cancel") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .foregroundColor(.red)
+            }
+        }
+        .navigationTitle("Edit Product")
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("Success"),
+                message: Text("Product updated successfully"),
+                dismissButton: .default(Text("OK")) {
+                    presentationMode.wrappedValue.dismiss()
+                }
+            )
+        }
+    }
+}
+
+// Update ProductCardView
 struct ProductCardView: View {
     let product: Product
     let editProduct: (Product) -> Void
